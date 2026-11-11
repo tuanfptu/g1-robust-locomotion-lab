@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "g1-robust-locomotion-lab"
+version = "0.1.0"
+description = "Simulation-only Unitree G1 locomotion research on modest hardware"
+requires-python = ">=3.10"
+dependencies = [
+  "mujoco==3.3.7", "gymnasium==1.2.2", "stable-baselines3==2.7.0",
+  "numpy>=1.26,<3", "tensorboard>=2.17,<3", "imageio[ffmpeg]>=2.35,<3",
+  "matplotlib>=3.8,<4"
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.9,<1"]
+
+[project.scripts]
+g1lab = "g1lab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+g1lab = ["assets/g1/*", "assets/g1/assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

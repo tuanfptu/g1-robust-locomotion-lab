@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+runs/
+*.egg-info/
+vendor/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+.env
+artifacts/
+*.mp4

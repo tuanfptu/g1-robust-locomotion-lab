@@ -1,0 +1,6 @@
+{
+  "terrain": "stairs", "difficulty": 0.3,
+  "episode_seconds": 20.0, "random_commands": false,
+  "command": [0.3, 0.0, 0.0],
+  "domain_randomization": true, "pushes": false
+}

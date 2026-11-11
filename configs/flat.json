@@ -1,0 +1,5 @@
+{
+  "terrain": "flat", "difficulty": 0.0,
+  "episode_seconds": 20.0, "random_commands": true,
+  "domain_randomization": false, "pushes": false
+}
