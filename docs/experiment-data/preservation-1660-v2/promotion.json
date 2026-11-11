@@ -1,0 +1,6 @@
+{
+  "promoted": false,
+  "reason": "turn survival 2/3 versus prior 3/3",
+  "default_bundle": "runs/autonomous-1660/selected-terrain",
+  "candidate_bundle": "runs/preservation-1660-v2/selected"
+}

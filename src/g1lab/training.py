@@ -35,6 +35,9 @@ def save_bundle(model, env, directory):
     env.save(str(directory / "vecnormalize.pkl"))
     config = env.get_attr("config")[0]
     (directory / "env_config.json").write_text(json.dumps(config.to_dict(), indent=2))
+    (directory / "environment_mix.json").write_text(
+        json.dumps([item.to_dict() for item in env.get_attr("config")], indent=2)
+    )
     if hasattr(model, "bootstrap_origin"):
         (directory / "origin.json").write_text(json.dumps(model.bootstrap_origin, indent=2))
     (directory / "bundle.json").write_text(json.dumps({"timesteps": model.num_timesteps}, indent=2))
@@ -93,7 +96,7 @@ class CriticWarmup(BaseCallback):
 
 
 class BehaviorAnchor(BaseCallback):
-    """Explicit BC anchoring between PPO rollouts; source data is recorded in run config."""
+    """Explicit behavioral replay between PPO rollouts; source is recorded in run config."""
 
     def __init__(self, path):
         super().__init__()
@@ -136,26 +139,52 @@ def train(args):
     torch.set_num_threads(args.threads)
     if args.device == "cuda" and not torch.cuda.is_available():
         raise SystemExit("CUDA unavailable. Use --device cpu; check NVIDIA driver before enabling CUDA.")
-    config = EnvConfig(**json.loads(Path(args.config).read_text()))
+    config_paths = [args.config, *getattr(args, "mix_config", [])]
+    configs = [EnvConfig(**json.loads(Path(path).read_text())) for path in config_paths]
+    config = configs[0]
+    if len(configs) > args.envs:
+        raise ValueError("Use at least one environment per mixed configuration")
+    contract = (
+        "control_dt",
+        "physics_dt",
+        "linear_velocity_observation",
+        "action_scale",
+        "crouched_home",
+        "unitree_pd",
+        "phase_observation",
+        "leg_only",
+    )
+    if any(any(getattr(other, key) != getattr(config, key) for key in contract) for other in configs):
+        raise ValueError("Mixed environments must share the policy observation/action contract")
     run = Path(args.run)
     run.mkdir(parents=True, exist_ok=False)
     try:
         revision = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, text=True
         ).strip()
+        dirty = bool(
+            subprocess.check_output(
+                ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL, text=True
+            ).strip()
+        )
     except subprocess.CalledProcessError:
         revision = "uncommitted"
+        dirty = True
     metadata = {
         "env": config.to_dict(),
+        "environment_mix": [configs[i % len(configs)].to_dict() for i in range(args.envs)],
         "train": vars(args),
         "git_revision": revision,
+        "git_dirty": dirty,
         "python": platform.python_version(),
         "torch": torch.__version__,
         "cuda_available": torch.cuda.is_available(),
     }
     (run / "config.json").write_text(json.dumps(metadata, indent=2))
     (run / "monitor").mkdir()
-    constructors = [make_env(config, args.seed, i, run / "monitor") for i in range(args.envs)]
+    constructors = [
+        make_env(configs[i % len(configs)], args.seed, i, run / "monitor") for i in range(args.envs)
+    ]
     base = (
         SubprocVecEnv(constructors, start_method="spawn")
         if args.workers and args.envs > 1
@@ -195,6 +224,16 @@ def train(args):
     if args.freeze_normalization:
         env.training = False
         env.norm_reward = False
+    metadata["effective_ppo"] = {
+        "n_steps": model.n_steps,
+        "n_envs": env.num_envs,
+        "batch_size": model.batch_size,
+        "n_epochs": model.n_epochs,
+        "initial_timesteps": model.num_timesteps,
+        "normalization_training": env.training,
+        "normalize_reward": env.norm_reward,
+    }
+    (run / "config.json").write_text(json.dumps(metadata, indent=2))
     start_steps, start = model.num_timesteps, time.perf_counter()
     interrupted = False
     try:

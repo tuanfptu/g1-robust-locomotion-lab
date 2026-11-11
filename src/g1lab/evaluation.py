@@ -7,6 +7,7 @@ from pathlib import Path
 
 import imageio.v2 as imageio
 import numpy as np
+import torch
 
 from .config import EnvConfig
 from .env import G1Env
@@ -50,6 +51,8 @@ def write_csv(path, rows):
 
 
 def evaluate(args):
+    # Small single-observation MLPs do not benefit from a large BLAS thread pool.
+    torch.set_num_threads(1)
     if args.bundle and getattr(args, "teacher", None):
         raise ValueError("Choose either --bundle or --teacher")
     teacher = None

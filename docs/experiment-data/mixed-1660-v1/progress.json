@@ -1,0 +1,284 @@
+[
+  {
+    "stage": "baseline",
+    "bundle": "runs/autonomous-1660/selected-terrain",
+    "metrics": {
+      "flat": {
+        "velocity_rmse_mps": {
+          "mean": 0.08900401560943155,
+          "std": 7.585116584756663e-05
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.13374364835321909,
+          "std": 0.002478246130681566
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 35.579612964691165,
+          "std": 0.09448420536843827
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "slope": {
+        "velocity_rmse_mps": {
+          "mean": 0.13600861326487568,
+          "std": 0.0011674227393456138
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.11667119573146356,
+          "std": 0.005047346553354599
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.948852701531564,
+          "std": 0.3703589740586928
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "rough": {
+        "velocity_rmse_mps": {
+          "mean": 0.10418594191209132,
+          "std": 0.007737401475244328
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.14019723675145412,
+          "std": 0.015231604712808391
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.188888901291655,
+          "std": 0.49368443274069307
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      }
+    }
+  },
+  {
+    "stage": 0,
+    "bundle": "runs/mixed-1660-v1/round-0/final",
+    "accepted": true,
+    "metrics": {
+      "flat": {
+        "velocity_rmse_mps": {
+          "mean": 0.08392136760920973,
+          "std": 2.7534407522102067e-05
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.1405581598016199,
+          "std": 0.003861933196563666
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 35.935310948244144,
+          "std": 0.12525724760637047
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "slope": {
+        "velocity_rmse_mps": {
+          "mean": 0.1403633806638202,
+          "std": 0.000955513251745671
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.11228850229740009,
+          "std": 0.0013701189372919628
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.00458356236457,
+          "std": 0.3446907967973196
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "rough": {
+        "velocity_rmse_mps": {
+          "mean": 0.09836298094893936,
+          "std": 0.00867873897177976
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.1415253053457151,
+          "std": 0.01530734750704077
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.2759294425083,
+          "std": 0.5127203672407887
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      }
+    },
+    "score": 0.8924507569260102
+  },
+  {
+    "stage": 1,
+    "bundle": "runs/mixed-1660-v1/round-1/final",
+    "accepted": true,
+    "metrics": {
+      "flat": {
+        "velocity_rmse_mps": {
+          "mean": 0.08298162293541392,
+          "std": 1.969751721688645e-05
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.14582676799237376,
+          "std": 0.00448814399512977
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 36.30093257851242,
+          "std": 0.14321349154248253
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "slope": {
+        "velocity_rmse_mps": {
+          "mean": 0.138681425411377,
+          "std": 0.0009873126498105705
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.11309130041064927,
+          "std": 0.0012516274075239087
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 36.67600796789186,
+          "std": 0.28934857144000503
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "rough": {
+        "velocity_rmse_mps": {
+          "mean": 0.09683928465533341,
+          "std": 0.008240155670038274
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.14718647778929123,
+          "std": 0.011890040261505377
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.575172793422496,
+          "std": 0.1322592204309565
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      }
+    },
+    "score": 0.8938325556659587
+  },
+  {
+    "stage": 2,
+    "bundle": "runs/mixed-1660-v1/round-2/final",
+    "accepted": false,
+    "metrics": {
+      "flat": {
+        "velocity_rmse_mps": {
+          "mean": 0.08539358709951352,
+          "std": 0.00011148326968252187
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.14256324817598218,
+          "std": 0.005267286819786748
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 35.813892634383194,
+          "std": 0.16152459188318247
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "slope": {
+        "velocity_rmse_mps": {
+          "mean": 0.13994651835837602,
+          "std": 0.0009244704246785251
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.11005463098088111,
+          "std": 0.0014718978794908202
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 35.99888121916342,
+          "std": 0.2758843568116873
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      },
+      "rough": {
+        "velocity_rmse_mps": {
+          "mean": 0.09982167008595622,
+          "std": 0.007785881832836371
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.1429475231406681,
+          "std": 0.016767105378556454
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 36.925148700165735,
+          "std": 0.39867885636794753
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 2
+      }
+    },
+    "score": 0.8916127414853848
+  }
+]

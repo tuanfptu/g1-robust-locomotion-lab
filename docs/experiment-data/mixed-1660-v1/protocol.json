@@ -1,0 +1,10 @@
+{
+  "bundle": "runs/autonomous-1660/selected-terrain",
+  "run": "runs/mixed-1660-v1",
+  "data": [
+    "runs/autonomous-1660/dagger-42/aggregated-data.npz",
+    "runs/autonomous-1660/dagger-slope/aggregated-data.npz"
+  ],
+  "rounds": 3,
+  "steps": 16384
+}

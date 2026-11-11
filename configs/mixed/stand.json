@@ -1,0 +1,18 @@
+{
+  "random_commands": false,
+  "episode_seconds": 30,
+  "tracking_sigma": 0.04,
+  "linear_velocity_observation": true,
+  "crouched_home": true,
+  "unitree_pd": true,
+  "phase_observation": true,
+  "action_scale": 1.0,
+  "leg_only": true,
+  "terrain": "flat",
+  "difficulty": 0,
+  "command": [
+    0,
+    0,
+    0
+  ]
+}

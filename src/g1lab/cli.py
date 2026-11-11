@@ -106,6 +106,12 @@ def main():
     bootstrap.add_argument("--data", help="Reuse an existing teacher-data.npz dataset")
     train = commands.add_parser("train")
     train.add_argument("--config", default="configs/flat.json")
+    train.add_argument(
+        "--mix-config",
+        action="append",
+        default=[],
+        help="Additional task config; workers cycle across configs in one PPO batch",
+    )
     train.add_argument("--run", required=True)
     train.add_argument("--steps", type=positive, default=1_000_000)
     train.add_argument("--envs", type=positive, default=1)

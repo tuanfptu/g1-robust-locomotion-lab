@@ -1,0 +1,13 @@
+{
+  "operation": "eval",
+  "bundle": "runs/autonomous-1660/selected-terrain",
+  "teacher": null,
+  "output": "runs/mixed-1660-v1/baseline-full",
+  "suite": "full",
+  "episodes": 3,
+  "seconds": 30.0,
+  "seed": 41000,
+  "video": false,
+  "config": null,
+  "scenario": null
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "elapsed_seconds": 36.06765309799812,
+    "additional_timesteps": 18432,
+    "steps_per_second": 511.03962738909235,
+    "interrupted": false
+  },
+  {
+    "elapsed_seconds": 34.179194595999434,
+    "additional_timesteps": 18432,
+    "steps_per_second": 539.2754340138081,
+    "interrupted": false
+  },
+  {
+    "elapsed_seconds": 35.22963298599643,
+    "additional_timesteps": 18432,
+    "steps_per_second": 523.1959131486442,
+    "interrupted": false
+  }
+]

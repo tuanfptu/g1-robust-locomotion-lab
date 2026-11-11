@@ -1,0 +1,20 @@
+{
+  "bundle": "runs/autonomous-1660/selected-terrain",
+  "run": "runs/preservation-1660-v2",
+  "rounds": 2,
+  "tasks": [
+    "flat",
+    "slope",
+    "rough",
+    "stand",
+    "lateral",
+    "turn"
+  ],
+  "method": "PPO with replay labels from previous student; not new expert labels",
+  "validation_seed": 7000,
+  "heldout_seeds": [
+    50000,
+    50001,
+    50002
+  ]
+}

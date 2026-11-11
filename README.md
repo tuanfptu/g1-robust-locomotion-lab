@@ -17,6 +17,13 @@ Checkpoint và video nằm trong `runs/autonomous-1660/` và `artifacts/autonomo
 phát triển (không được git theo dõi). Kết quả định lượng và giới hạn nằm trong
 [báo cáo thực nghiệm](docs/EXPERIMENT_1660.md).
 
+Đợt tiếp theo đã bổ sung PPO học xen kẽ nhiều môi trường và kiểm tra mất kỹ năng.
+Xem [kết quả trộn địa hình, gồm cả hồi quy quay tại chỗ](docs/EXPERIMENT_MIXED_1660.md)
+và [cách chạy tiếp trên máy hiện tại](docs/LOCAL_TRAINING.md). Bản trộn địa hình đầu tiên
+là ứng viên thực nghiệm; checkpoint mặc định trước đó vẫn được giữ.
+Đợt [giữ sáu kỹ năng bằng replay](docs/EXPERIMENT_PRESERVATION_1660.md) cũng được kiểm thử:
+quay hoàn thành 2/3 lượt thay vì 3/3 của bản cũ, nên chưa được đưa làm mặc định.
+
 Policy có khả năng đi hiện tại được khởi tạo từ **policy Unitree đã có sẵn**, không phải
 PPO tự học đi từ đầu. Robot vẫn là mô hình G1 29 khớp; ở chế độ này 12 khớp chân nhận
 action của policy, thân trên giữ tư thế bằng PD. Cấu hình actuator và observation được lưu

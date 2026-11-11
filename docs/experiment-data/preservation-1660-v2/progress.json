@@ -1,0 +1,266 @@
+[
+  {
+    "round": 0,
+    "accepted": true,
+    "metrics": {
+      "flat": {
+        "velocity_rmse_mps": {
+          "mean": 0.08842119536765093,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.12491535637780513,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 35.2989159806383,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "slope": {
+        "velocity_rmse_mps": {
+          "mean": 0.1342895817193477,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.1219457780561966,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.79809928845057,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "rough": {
+        "velocity_rmse_mps": {
+          "mean": 0.13040492072421012,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.14772481770080656,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 39.10957636347171,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "stand": {
+        "velocity_rmse_mps": {
+          "mean": 0.052709284404281055,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.10918057565353392,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 24.13860095109203,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "lateral": {
+        "velocity_rmse_mps": {
+          "mean": 0.14603350111344013,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.18930599748721294,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.378486471654234,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "turn": {
+        "velocity_rmse_mps": {
+          "mean": 0.0596621373493529,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.1723775391941182,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 36.193529437897915,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      }
+    }
+  },
+  {
+    "round": 1,
+    "accepted": false,
+    "metrics": {
+      "flat": {
+        "velocity_rmse_mps": {
+          "mean": 0.08807443616780454,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.12489045696136421,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 35.29950138074257,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "slope": {
+        "velocity_rmse_mps": {
+          "mean": 0.13403738330847295,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.12229113465144355,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.80562319318273,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "rough": {
+        "velocity_rmse_mps": {
+          "mean": 0.13276402588108413,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.14596608797307337,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 38.83285443090292,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "stand": {
+        "velocity_rmse_mps": {
+          "mean": 0.05225422839764324,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.10462287029658882,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 24.26900141568911,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "lateral": {
+        "velocity_rmse_mps": {
+          "mean": 0.14513787556337418,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.18670265517878912,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 37.234902387859385,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      },
+      "turn": {
+        "velocity_rmse_mps": {
+          "mean": 0.06266783718343524,
+          "std": 0.0
+        },
+        "yaw_rmse_radps": {
+          "mean": 0.1759364506463187,
+          "std": 0.0
+        },
+        "duration_s": {
+          "mean": 15.0,
+          "std": 0.0
+        },
+        "mean_power_w": {
+          "mean": 36.56784575159018,
+          "std": 0.0
+        },
+        "survival_rate": 1.0,
+        "push_received_count": 0,
+        "episodes": 1
+      }
+    }
+  }
+]

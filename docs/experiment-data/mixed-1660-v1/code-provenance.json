@@ -1,0 +1,18 @@
+{
+  "note": "Pilot executed with uncommitted mixed-terrain implementation based on b9e5a64. Run config git_revision identifies base commit, not a clean source state. Final implementation and report are committed together after evaluation.",
+  "training_seed": 42,
+  "validation_seeds": [
+    6000,
+    6001
+  ],
+  "heldout_seeds": [
+    40000,
+    40001,
+    40002
+  ],
+  "full_suite_seeds": [
+    41000,
+    41001,
+    41002
+  ]
+}

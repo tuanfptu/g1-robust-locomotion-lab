@@ -1,0 +1,13 @@
+{
+  "operation": "eval",
+  "bundle": "runs/preservation-1660-v2/selected",
+  "teacher": null,
+  "output": "runs/preservation-1660-v2/heldout/turn",
+  "suite": "flat",
+  "episodes": 3,
+  "seconds": 30.0,
+  "seed": 50000,
+  "video": false,
+  "config": "configs/mixed/turn.json",
+  "scenario": null
+}
