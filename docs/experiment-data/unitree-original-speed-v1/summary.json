@@ -1,0 +1,72 @@
+{
+  "highest_tested_validated_command_mps": 1.6,
+  "validation": [
+    {
+      "command_mps": 1.6,
+      "seed": 71000,
+      "hold_s": 60,
+      "duration_s": 65.0,
+      "survived": true,
+      "passed_tracking": true,
+      "steady_mean_body_vx_mps": 1.3295088503976051,
+      "steady_rmse_mps": 0.3034060599057185,
+      "steady_mean_world_vx_mps": 1.3367770070994183,
+      "peak_horizontal_speed_mps": 1.5018853318569465,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.6,
+      "seed": 71001,
+      "hold_s": 60,
+      "duration_s": 65.0,
+      "survived": true,
+      "passed_tracking": true,
+      "steady_mean_body_vx_mps": 1.329382604024818,
+      "steady_rmse_mps": 0.30353934678005995,
+      "steady_mean_world_vx_mps": 1.3366555659743267,
+      "peak_horizontal_speed_mps": 1.5018706935866053,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.6,
+      "seed": 71002,
+      "hold_s": 60,
+      "duration_s": 65.0,
+      "survived": true,
+      "passed_tracking": true,
+      "steady_mean_body_vx_mps": 1.3295457592367117,
+      "steady_rmse_mps": 0.3033968748247371,
+      "steady_mean_world_vx_mps": 1.3368866731311668,
+      "peak_horizontal_speed_mps": 1.504104463143697,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.6,
+      "seed": 71003,
+      "hold_s": 60,
+      "duration_s": 65.0,
+      "survived": true,
+      "passed_tracking": true,
+      "steady_mean_body_vx_mps": 1.329581551926897,
+      "steady_rmse_mps": 0.30336730573322074,
+      "steady_mean_world_vx_mps": 1.3368291315278773,
+      "peak_horizontal_speed_mps": 1.5040878054211497,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.6,
+      "seed": 71004,
+      "hold_s": 60,
+      "duration_s": 65.0,
+      "survived": true,
+      "passed_tracking": true,
+      "steady_mean_body_vx_mps": 1.329294773308849,
+      "steady_rmse_mps": 0.30356042681473255,
+      "steady_mean_world_vx_mps": 1.336505506996202,
+      "peak_horizontal_speed_mps": 1.5041247903745736,
+      "stage": "validation"
+    }
+  ],
+  "coarse_best_command_mps": 1.5,
+  "note": "No training. Speed limit is conditional on model, startup ramp, duration and finite tested seeds."
+}

@@ -1,0 +1,14 @@
+{
+  "args": {
+    "source": "vendor/unitree_rl_gym",
+    "output": "artifacts/unitree-original-speed-v1"
+  },
+  "policy": "Original Unitree motion.pt, no training or student",
+  "sha256": "cf668f75b90d1abf73d2b87612a6e76bccc61ff7e083b63582d3f6aaa3c1759d",
+  "source_commit": "276801e46c5d433564f24658bac64f254b7d2d4b",
+  "model": "Original Unitree 12 controlled leg DoF, fixed upper body",
+  "conditions": "flat, friction 0.8, no pushes, no domain randomization",
+  "schedule": "2 s stand + 3 s linear ramp + 30 s hold; metrics after t=10 s",
+  "pass": "survive full trial, steady mean body vx >= 80% target, planar RMSE <= max(0.2, 20% target)",
+  "scope": "Highest tested speed meeting these conditions, not a global or physical robot speed limit"
+}

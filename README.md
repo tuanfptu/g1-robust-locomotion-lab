@@ -4,6 +4,10 @@
 
 Unitree G1 29 khớp • MuJoCo CPU • PPO / Stable-Baselines3 • Python 3.10+
 
+[Đo tốc độ policy Unitree gốc](docs/UNITREE_SPEED.md): lệnh 1,6 m/s qua 5/5 lượt giữ 60 giây,
+tốc độ tiến thực tế trung bình khoảng 1,33 m/s trên mô hình gốc 12 khớp chân, thân trên cố định.
+Đây là benchmark riêng, không phải kết quả của policy student trên mô hình 29 khớp.
+
 Mốc mới: [môi trường tự đứng dậy từ nằm ngửa](docs/RECOVERY.md), dùng PPO khởi tạo ngẫu nhiên
 và điều khiển toàn thân. Đây là pilot phát triển môi trường, chưa phải policy đứng dậy đã hội tụ;
 checkpoint đi hiện tại vẫn được giữ riêng.

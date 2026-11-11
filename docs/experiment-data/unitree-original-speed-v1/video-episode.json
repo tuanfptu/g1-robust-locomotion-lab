@@ -1,0 +1,12 @@
+{
+  "command_mps": 1.6,
+  "seed": 71000,
+  "hold_s": 60,
+  "duration_s": 65.0,
+  "survived": true,
+  "passed_tracking": true,
+  "steady_mean_body_vx_mps": 1.3295088503976051,
+  "steady_rmse_mps": 0.3034060599057185,
+  "steady_mean_world_vx_mps": 1.3367770070994183,
+  "peak_horizontal_speed_mps": 1.5018853318569465
+}
