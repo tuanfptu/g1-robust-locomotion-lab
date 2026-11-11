@@ -1,0 +1,17 @@
+{
+  "worlds": 16,
+  "workers": 4,
+  "simulated_seconds_per_world": 12.0,
+  "wall_seconds_including_render": 24.72278782101057,
+  "simulation_and_policy_wall_seconds": 12.148130909787142,
+  "aggregate_control_steps_per_second_without_render": 790.2450238057412,
+  "aggregate_control_steps_per_second_including_render": 388.30572302373906,
+  "per_world_realtime_factor_including_render": 0.48538215377967386,
+  "falls": 4,
+  "resets": 16,
+  "frames": 300,
+  "video_fps": 25,
+  "learning_updates": 0,
+  "backend": "Native MuJoCo CPU, separate MjData and separate LSTM state per world, shared read-only model",
+  "note": "Video plays simulation time at 1x; rendering/collection can take longer than video duration."
+}

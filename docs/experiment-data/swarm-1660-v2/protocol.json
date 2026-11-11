@@ -1,0 +1,22 @@
+{
+  "args": {
+    "source": "vendor/unitree_rl_gym",
+    "output": "artifacts/swarm-1660-v2",
+    "worlds": 16,
+    "workers": 4,
+    "seconds": 12.0
+  },
+  "seed_base": 88000,
+  "policy_sha256": "cf668f75b90d1abf73d2b87612a6e76bccc61ff7e083b63582d3f6aaa3c1759d",
+  "source_commit": "276801e46c5d433564f24658bac64f254b7d2d4b",
+  "commands": [
+    0.5,
+    1.0,
+    1.6,
+    2.5
+  ],
+  "physics_dt": 0.002,
+  "control_dt": 0.02,
+  "reset": "independently on fall or 8\u20139.2 simulated seconds",
+  "rendering": "All independent states are combined in one overview; no shared-world robot interactions"
+}
