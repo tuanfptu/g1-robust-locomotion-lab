@@ -1,0 +1,23 @@
+{
+  "configured": {
+    "velocity_rmse_mps": {
+      "mean": 0.08633192850476204,
+      "std": 0.0
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.11982969756212236,
+      "std": 0.0
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 35.35597962770968,
+      "std": 0.0
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 1
+  }
+}

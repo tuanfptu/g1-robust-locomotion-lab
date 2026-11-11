@@ -1,0 +1,464 @@
+{
+  "stand": {
+    "velocity_rmse_mps": {
+      "mean": 0.04841965644104294,
+      "std": 4.4285194210667344e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.07741791106218884,
+      "std": 0.0006302904023955962
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 24.237092175244698,
+      "std": 0.0028994649814826864
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "forward": {
+    "velocity_rmse_mps": {
+      "mean": 0.09906144905768226,
+      "std": 5.190768049652151e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.1304054880369508,
+      "std": 0.0007799648266040088
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.9954354153542,
+      "std": 0.0007406794848137954
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "lateral": {
+    "velocity_rmse_mps": {
+      "mean": 0.07795697721099365,
+      "std": 0.00029237350778021443
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.08703084461073766,
+      "std": 0.0029884214246221163
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 27.871513127656545,
+      "std": 0.026338521552086092
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "turn": {
+    "velocity_rmse_mps": {
+      "mean": 0.050250705958181624,
+      "std": 0.00017868724405022062
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.11728678186993373,
+      "std": 0.00010202550405802531
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 31.181879820845207,
+      "std": 0.020515683665713644
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "command_changes": {
+    "velocity_rmse_mps": {
+      "mean": 0.09070061816972873,
+      "std": 2.3887982185876186e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.11319541508148734,
+      "std": 0.00042746587030567705
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 33.48493415835317,
+      "std": 0.002602737749466741
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "friction_0.3": {
+    "velocity_rmse_mps": {
+      "mean": 0.09917400648421726,
+      "std": 0.00018628171705421386
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.12877228571909458,
+      "std": 0.00031134956033536696
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 42.55396222040384,
+      "std": 0.018914118166166723
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "friction_0.6": {
+    "velocity_rmse_mps": {
+      "mean": 0.0989325625083457,
+      "std": 3.661675397243656e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13100444432891212,
+      "std": 0.000751329133970113
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 42.22872377991208,
+      "std": 0.010598527461115984
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "friction_1.1": {
+    "velocity_rmse_mps": {
+      "mean": 0.10283917269722835,
+      "std": 6.905428501385252e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13120489959057038,
+      "std": 0.000693153072539398
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 40.57660338829896,
+      "std": 0.00781336731266034
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "mass_0.85": {
+    "velocity_rmse_mps": {
+      "mean": 0.0800086225300271,
+      "std": 9.108660292133642e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13006974579059993,
+      "std": 0.001187830984038115
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 39.90061167466022,
+      "std": 0.008312620960441977
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "mass_1.15": {
+    "velocity_rmse_mps": {
+      "mean": 0.1166365156481568,
+      "std": 5.8097449728828244e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.14134721052270047,
+      "std": 0.0007066420872800691
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 42.36512770894553,
+      "std": 0.0031804987484931263
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "slope_0.2": {
+    "velocity_rmse_mps": {
+      "mean": 0.15216358014045453,
+      "std": 0.00017502271635273973
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.1242876238312093,
+      "std": 0.0016922911139687022
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 40.97491008574141,
+      "std": 0.027475153647142644
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "slope_0.5": {
+    "velocity_rmse_mps": {
+      "mean": 0.23611212022021935,
+      "std": 0.00010214533691442933
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.12351409806034956,
+      "std": 0.00028087088625517234
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 45.36535500107081,
+      "std": 0.09335424945003264
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "rough_0.2": {
+    "velocity_rmse_mps": {
+      "mean": 0.10091057436135598,
+      "std": 0.0003575035749633713
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13076198547198342,
+      "std": 0.0010412869162446663
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.94993558837292,
+      "std": 0.09917535190538987
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "rough_0.5": {
+    "velocity_rmse_mps": {
+      "mean": 0.10766133762200923,
+      "std": 0.0014226779471667866
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13148351623623591,
+      "std": 0.0012334677580947268
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 42.07403537092689,
+      "std": 0.18540785934612236
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "stairs_0.2": {
+    "velocity_rmse_mps": {
+      "mean": 0.22304867844236523,
+      "std": 0.03670622551087229
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.24148458360760802,
+      "std": 0.05751049282969299
+    },
+    "duration_s": {
+      "mean": 23.426666666666666,
+      "std": 4.648048574999573
+    },
+    "mean_power_w": {
+      "mean": 48.14423943133057,
+      "std": 0.19833058484118482
+    },
+    "survival_rate": 0.3333333333333333,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "stairs_0.5": {
+    "velocity_rmse_mps": {
+      "mean": 0.2550578729657565,
+      "std": 0.003455163565194534
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.8586707922140256,
+      "std": 0.028688984816718856
+    },
+    "duration_s": {
+      "mean": 4.14,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 85.3441035671881,
+      "std": 0.48061009298040275
+    },
+    "survival_rate": 0.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "push_2_front": {
+    "velocity_rmse_mps": {
+      "mean": 0.0984413081854984,
+      "std": 5.2211782255720254e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13055957454579445,
+      "std": 0.0007790881429594424
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.96217677789278,
+      "std": 0.0007501814257660671
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 3,
+    "episodes": 3
+  },
+  "push_2_side": {
+    "velocity_rmse_mps": {
+      "mean": 0.09896359917655578,
+      "std": 5.213250714431887e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.1305465689694534,
+      "std": 0.0007791581010921078
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.92570676013659,
+      "std": 0.0007289385818070248
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 3,
+    "episodes": 3
+  },
+  "push_5_front": {
+    "velocity_rmse_mps": {
+      "mean": 0.09837184332120959,
+      "std": 5.230952268513893e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13065774787338963,
+      "std": 0.0007785086974166672
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.97294105777441,
+      "std": 0.0007330591821454393
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 3,
+    "episodes": 3
+  },
+  "push_5_side": {
+    "velocity_rmse_mps": {
+      "mean": 0.09965399863628883,
+      "std": 5.1949739386262625e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13056568852836042,
+      "std": 0.0007791414744085171
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.895848499342414,
+      "std": 0.0007284117019130784
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 3,
+    "episodes": 3
+  },
+  "push_10_front": {
+    "velocity_rmse_mps": {
+      "mean": 0.1002242400998944,
+      "std": 5.1362343757063024e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13064880609706728,
+      "std": 0.000778489706222341
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 42.05404127922299,
+      "std": 0.0010621543334386652
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 3,
+    "episodes": 3
+  },
+  "push_10_side": {
+    "velocity_rmse_mps": {
+      "mean": 0.10321497839276861,
+      "std": 5.067552626898496e-05
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.13111693237154046,
+      "std": 0.000775695992837759
+    },
+    "duration_s": {
+      "mean": 30.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 41.95065184019505,
+      "std": 0.000731802850615875
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 3,
+    "episodes": 3
+  }
+}

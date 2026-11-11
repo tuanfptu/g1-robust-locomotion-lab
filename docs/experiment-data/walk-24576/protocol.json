@@ -1,0 +1,12 @@
+{
+  "operation": "eval",
+  "bundle": "runs/autonomous-1660/walk-slow-42/checkpoints/step-24576",
+  "output": "artifacts/autonomous-1660/walk-24576",
+  "suite": "flat",
+  "episodes": 3,
+  "seconds": 30.0,
+  "seed": 10000,
+  "video": false,
+  "config": "configs/walk-slow.json",
+  "scenario": null
+}

@@ -41,7 +41,17 @@ class G1Env(gym.Env):
         self.qadr = self.model.jnt_qposadr[self.joint_ids]
         self.vadr = self.model.jnt_dofadr[self.joint_ids]
         self.home = self.model.key_qpos[0].copy()
+        if self.config.crouched_home:
+            self.home[self.qadr[:12]] = [-0.1, 0, 0, 0.3, -0.2, 0] * 2
         self.nominal = self.home[self.qadr].copy()
+        if self.config.unitree_pd:
+            gains = np.array([100, 100, 100, 150, 40, 40] * 2)
+            damping = np.array([2, 2, 2, 4, 2, 2] * 2)
+            self.model.actuator_gainprm[:12, 0] = gains
+            self.model.actuator_biasprm[:12, 1] = -gains
+            self.model.actuator_biasprm[:12, 2] = -damping
+            self.model.dof_damping[self.vadr] = 0.001
+            self.model.dof_frictionloss[self.vadr] = 0.1
         self.limits = self.model.jnt_range[self.joint_ids].copy()
         self.base_mass = self.model.body_mass.copy()
         self.base_inertia = self.model.body_inertia.copy()
@@ -57,7 +67,18 @@ class G1Env(gym.Env):
         self.scan_xy = np.array([(x, y) for x in (-0.3, 0.0, 0.3, 0.6, 0.9) for y in (-0.3, 0.0, 0.3)])
         self.action_space = spaces.Box(-1.0, 1.0, (self.model.nu,), dtype=np.float32)
         self.observation_space = spaces.Box(
-            -np.inf, np.inf, (3 + 3 + 3 + 3 * self.model.nu + 15,), dtype=np.float32
+            -np.inf,
+            np.inf,
+            (
+                3
+                + 3
+                + 3
+                + 3 * self.model.nu
+                + 15
+                + (3 if self.config.linear_velocity_observation else 0)
+                + (2 if self.config.phase_observation else 0),
+            ),
+            dtype=np.float32,
         )
         self.previous_action = np.zeros(self.model.nu)
         self.command = np.array(self.config.command, dtype=float)
@@ -69,6 +90,10 @@ class G1Env(gym.Env):
         self.step_count = 0
 
     def ground_height(self, x, y):
+        if self.config.terrain == "flat":
+            return 0.0
+        if self.config.terrain == "slope":
+            return float(x * np.tan(np.deg2rad(10 * self.config.difficulty)))
         distance = mujoco.mj_ray(
             self.model,
             self.data,
@@ -89,7 +114,7 @@ class G1Env(gym.Env):
     def _observation(self):
         rotation = self.data.xmat[self.pelvis].reshape(3, 3)
         gravity = rotation.T @ np.array([0.0, 0.0, -1.0])
-        _, angular = self.body_velocity()
+        linear, angular = self.body_velocity()
         yaw = np.arctan2(rotation[1, 0], rotation[0, 0])
         c, s = np.cos(yaw), np.sin(yaw)
         scan_xy = self.scan_xy @ np.array([[c, s], [-s, c]])
@@ -108,6 +133,11 @@ class G1Env(gym.Env):
                 scan,
             ]
         )
+        if self.config.linear_velocity_observation:
+            obs = np.concatenate([obs, linear])
+        if self.config.phase_observation:
+            phase = 2 * np.pi * (self.data.time % 0.8) / 0.8
+            obs = np.concatenate([obs, [np.sin(phase), np.cos(phase)]])
         return obs.astype(np.float32)
 
     def set_command(self, vx, vy, yaw_rate):
@@ -185,8 +215,12 @@ class G1Env(gym.Env):
         if action.shape != self.action_space.shape or not np.isfinite(action).all():
             raise ValueError("Action must be finite and match action_space")
         action = np.clip(action, -1, 1)
+        if self.config.leg_only:
+            action[12:] = 0
         cfg = self.config
-        self.data.ctrl[:] = np.clip(self.nominal + action * 0.35, self.limits[:, 0], self.limits[:, 1])
+        self.data.ctrl[:] = np.clip(
+            self.nominal + action * cfg.action_scale, self.limits[:, 0], self.limits[:, 1]
+        )
         if cfg.pushes and self.data.time >= self.next_push:
             self.push(self.np_random.uniform(2, 8), self.np_random.uniform(-np.pi, np.pi))
             self.next_push = self.data.time + self.np_random.uniform(3, 6)
@@ -237,7 +271,7 @@ class G1Env(gym.Env):
         finite = np.isfinite(self.data.qpos).all() and np.isfinite(self.data.qvel).all()
         fallen = height < 0.45 or upright < 0.45 or not finite
         reward_terms = {
-            "tracking": 2.0 * np.exp(-np.dot(error, error) / 0.25),
+            "tracking": 2.0 * np.exp(-np.dot(error, error) / cfg.tracking_sigma),
             "yaw_tracking": 0.5 * np.exp(-(yaw_error**2) / 0.25),
             "upright": 0.5 * upright,
             "alive": 0.5,
@@ -264,9 +298,14 @@ class G1Env(gym.Env):
             "fallen": bool(fallen),
             "impulse_ns": applied_impulse,
             "time": float(self.data.time),
-            **reward_terms,
         }
+        info.update({f"reward_{name}": float(value) for name, value in reward_terms.items()})
         info.update(foot_slip_sum_mps=slip_sum, contacting_feet=len(contacting_feet))
+        for side, site in zip(("left", "right"), self.foot_sites):
+            info[f"{side}_foot_contact"] = site in contacting_feet
+            info[f"{side}_foot_clearance_m"] = float(
+                self.data.site_xpos[site, 2] - self.ground_height(*self.data.site_xpos[site, :2])
+            )
         truncated = self.step_count >= round(cfg.episode_seconds / cfg.control_dt)
         if (
             cfg.random_commands

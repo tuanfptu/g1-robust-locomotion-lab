@@ -1,0 +1,23 @@
+{
+  "stand": {
+    "velocity_rmse_mps": {
+      "mean": 0.0038629300908915904,
+      "std": 0.0
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.015784815281049993,
+      "std": 0.0
+    },
+    "duration_s": {
+      "mean": 10.0,
+      "std": 0.0
+    },
+    "mean_power_w": {
+      "mean": 0.12642311253721258,
+      "std": 0.0
+    },
+    "survival_rate": 1.0,
+    "push_received_count": 0,
+    "episodes": 1
+  }
+}

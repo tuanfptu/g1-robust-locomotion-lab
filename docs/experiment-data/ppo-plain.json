@@ -1,0 +1,106 @@
+[
+  {
+    "stage": "commands",
+    "accepted": false,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.8023264752318975,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.29276485328001606,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 2.42,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 65.98921684550884,
+        "std": 0.0
+      },
+      "survival_rate": 0.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/dagger-42/round-7"
+  },
+  {
+    "stage": "robust",
+    "accepted": false,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.679495627786491,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.29088303876778343,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 2.98,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 73.13563293827337,
+        "std": 0.0
+      },
+      "survival_rate": 0.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/dagger-42/round-7"
+  },
+  {
+    "stage": "slope",
+    "accepted": false,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 1.0267155629346285,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.5120452051175486,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 1.06,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 104.74407388416091,
+        "std": 0.0
+      },
+      "survival_rate": 0.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/dagger-42/round-7"
+  },
+  {
+    "stage": "rough",
+    "accepted": false,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.8169527879907714,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.348799698907412,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 1.28,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 81.915350513365,
+        "std": 0.0
+      },
+      "survival_rate": 0.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/dagger-42/round-7"
+  }
+]

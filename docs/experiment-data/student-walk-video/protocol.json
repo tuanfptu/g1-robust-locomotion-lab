@@ -1,0 +1,13 @@
+{
+  "operation": "eval",
+  "bundle": "runs/autonomous-1660/dagger-42/round-7",
+  "teacher": null,
+  "output": "artifacts/autonomous-1660/student-walk-video",
+  "suite": "flat",
+  "episodes": 1,
+  "seconds": 30.0,
+  "seed": 10000,
+  "video": true,
+  "config": "configs/bootstrapped-walk.json",
+  "scenario": null
+}

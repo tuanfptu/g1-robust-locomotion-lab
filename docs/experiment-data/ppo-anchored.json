@@ -1,0 +1,106 @@
+[
+  {
+    "stage": "commands",
+    "accepted": true,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.09190531855662275,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.13941694226465365,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 35.94325904789989,
+        "std": 0.0
+      },
+      "survival_rate": 1.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/ppo-anchored/commands/final"
+  },
+  {
+    "stage": "robust",
+    "accepted": true,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.09281599868477595,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.14416761424952254,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 35.68561085859811,
+        "std": 0.0
+      },
+      "survival_rate": 1.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/ppo-anchored/robust/final"
+  },
+  {
+    "stage": "slope",
+    "accepted": true,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.09280891939705183,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.1429310558528747,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 36.010402721731566,
+        "std": 0.0
+      },
+      "survival_rate": 1.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/ppo-anchored/slope/final"
+  },
+  {
+    "stage": "rough",
+    "accepted": true,
+    "validation": {
+      "velocity_rmse_mps": {
+        "mean": 0.09206575036698883,
+        "std": 0.0
+      },
+      "yaw_rmse_radps": {
+        "mean": 0.14791809984674903,
+        "std": 0.0
+      },
+      "duration_s": {
+        "mean": 10.0,
+        "std": 0.0
+      },
+      "mean_power_w": {
+        "mean": 35.90501472746595,
+        "std": 0.0
+      },
+      "survival_rate": 1.0,
+      "push_received_count": 0,
+      "episodes": 1
+    },
+    "selected_bundle": "runs/autonomous-1660/ppo-anchored/rough/final"
+  }
+]

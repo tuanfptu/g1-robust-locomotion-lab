@@ -1,0 +1,107 @@
+{
+  "stand": {
+    "velocity_rmse_mps": {
+      "mean": 0.8234685223391036,
+      "std": 0.0036637550957014605
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.5392520018816379,
+      "std": 0.09378591522681282
+    },
+    "duration_s": {
+      "mean": 1.2666666666666666,
+      "std": 0.009428090415820642
+    },
+    "mean_power_w": {
+      "mean": 92.17280277616082,
+      "std": 10.596223389779047
+    },
+    "survival_rate": 0.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "forward": {
+    "velocity_rmse_mps": {
+      "mean": 0.6000538778410371,
+      "std": 0.01748115611000119
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.43687618633199343,
+      "std": 0.06542927733393487
+    },
+    "duration_s": {
+      "mean": 1.2266666666666666,
+      "std": 0.024944382578492966
+    },
+    "mean_power_w": {
+      "mean": 74.51672700588877,
+      "std": 5.662909485217212
+    },
+    "survival_rate": 0.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "lateral": {
+    "velocity_rmse_mps": {
+      "mean": 0.8541765566703856,
+      "std": 0.01666705313040906
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.5008451615957261,
+      "std": 0.061163836127676445
+    },
+    "duration_s": {
+      "mean": 1.3466666666666667,
+      "std": 0.033993463423951924
+    },
+    "mean_power_w": {
+      "mean": 79.12267066096403,
+      "std": 4.080441319924198
+    },
+    "survival_rate": 0.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "turn": {
+    "velocity_rmse_mps": {
+      "mean": 0.7961009155551748,
+      "std": 0.020044293721086556
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.4421662033467381,
+      "std": 0.054301848754230574
+    },
+    "duration_s": {
+      "mean": 1.3533333333333335,
+      "std": 0.08055363982396382
+    },
+    "mean_power_w": {
+      "mean": 76.24754770791223,
+      "std": 13.189163828373696
+    },
+    "survival_rate": 0.0,
+    "push_received_count": 0,
+    "episodes": 3
+  },
+  "command_changes": {
+    "velocity_rmse_mps": {
+      "mean": 0.8234685223391036,
+      "std": 0.0036637550957014605
+    },
+    "yaw_rmse_radps": {
+      "mean": 0.5392520018816379,
+      "std": 0.09378591522681282
+    },
+    "duration_s": {
+      "mean": 1.2666666666666666,
+      "std": 0.009428090415820642
+    },
+    "mean_power_w": {
+      "mean": 92.17280277616082,
+      "std": 10.596223389779047
+    },
+    "survival_rate": 0.0,
+    "push_received_count": 0,
+    "episodes": 3
+  }
+}

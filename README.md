@@ -10,6 +10,48 @@ Mục tiêu: học đi theo lệnh vận tốc, đánh giá khả năng giữ th
 Mã cung cấp đầy đủ pipeline từ mô phỏng tới train/eval/report/demo. Chất lượng đi phải được
 xác nhận bằng huấn luyện và benchmark; repo không kèm policy đã hội tụ.
 
+## Thực nghiệm tự động trên máy 1660 Ti
+
+Đã chạy học đứng, các pilot PPO từ đầu, khởi tạo bằng teacher Unitree, DAgger và fine-tune PPO.
+Checkpoint và video nằm trong `runs/autonomous-1660/` và `artifacts/autonomous-1660/` tại máy
+phát triển (không được git theo dõi). Kết quả định lượng và giới hạn nằm trong
+[báo cáo thực nghiệm](docs/EXPERIMENT_1660.md).
+
+Policy có khả năng đi hiện tại được khởi tạo từ **policy Unitree đã có sẵn**, không phải
+PPO tự học đi từ đầu. Robot vẫn là mô hình G1 29 khớp; ở chế độ này 12 khớp chân nhận
+action của policy, thân trên giữ tư thế bằng PD. Cấu hình actuator và observation được lưu
+trong từng bundle và tự khôi phục khi eval/demo.
+
+```bash
+bash scripts/fetch_teacher.sh
+g1lab eval --teacher vendor/unitree_rl_gym --output artifacts/teacher-check --episodes 3 --seconds 30
+g1lab bootstrap --run runs/bootstrap --samples 16000 --epochs 100
+python scripts/dagger.py --bundle runs/bootstrap/final --data runs/bootstrap/teacher-data.npz --run runs/dagger
+python scripts/finetune_campaign.py --bundle runs/dagger/round-7 --run runs/anchored \
+  --steps 8192 --anchor-data runs/dagger/aggregated-data.npz
+```
+
+`round-7` là ví dụ checkpoint; chọn bằng validation seed riêng trước khi chạy đánh giá cuối.
+Fine-tune có anchor là **PPO + BC anchoring**, không phải PPO thuần. Script lưu cả các ứng viên
+bị loại khi làm mất khả năng đi. Chạy lại thực nghiệm không bảo đảm cùng chất lượng.
+
+```bash
+g1lab demo --bundle runs/dagger/round-7 --auto
+```
+
+`--auto` tự chạy chu kỳ đứng → đi → quay nhẹ → dừng. Không truyền `--auto` để điều khiển bằng phím.
+
+Checkpoint có sẵn tại máy phát triển:
+
+```bash
+# Mặc định: đứng/đi/ngang/quay, có thích nghi dốc nhẹ
+g1lab demo --bundle runs/autonomous-1660/selected-terrain --auto
+# Bản trước thích nghi dốc giữ tỷ lệ vượt rough thấp tốt hơn
+g1lab demo --bundle runs/autonomous-1660/selected --terrain rough --difficulty 0.2 --auto
+```
+
+Hai checkpoint được đóng gói local trong `artifacts/g1-1660-checkpoints.zip`.
+
 ## Vì sao dùng CPU MuJoCo ở bản này?
 
 Máy phát triển có GTX 1660 Ti Mobile 6 GB và Ryzen 5 4600H. MuJoCo chuẩn chạy physics

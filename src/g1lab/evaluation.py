@@ -50,19 +50,53 @@ def write_csv(path, rows):
 
 
 def evaluate(args):
+    if args.bundle and getattr(args, "teacher", None):
+        raise ValueError("Choose either --bundle or --teacher")
+    teacher = None
+    if getattr(args, "teacher", None):
+        from .bootstrap import UnitreeTeacher, teacher_config
+
+        teacher = UnitreeTeacher(args.teacher)
+    if getattr(args, "config", None):
+        config = EnvConfig(**json.loads(Path(args.config).read_text()))
+        cases = [
+            (
+                "configured",
+                replace(
+                    config,
+                    random_commands=False,
+                    domain_randomization=False,
+                    pushes=False,
+                    episode_seconds=args.seconds,
+                ),
+            )
+        ]
+    else:
+        cases = scenarios(args.suite, args.seconds)
+    if getattr(args, "scenario", None):
+        cases = [(name, config) for name, config in cases if name == args.scenario]
+        if not cases:
+            raise ValueError(f"Unknown scenario: {args.scenario}")
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=False)
     (output / "protocol.json").write_text(json.dumps(vars(args), indent=2))
     records = []
-    for name, config in scenarios(args.suite, args.seconds):
-        if args.bundle:
+    environments = {}
+    for name, config in cases:
+        if teacher is not None:
+            raw, model, vec = G1Env(teacher_config(config)), None, None
+        elif args.bundle:
             model, vec, raw = load_policy(args.bundle, config)
         else:
             raw, model, vec = G1Env(config), None, None
+        environments[name] = raw.config.to_dict()
+        config = raw.config
         try:
             for episode in range(args.episodes):
                 seed = args.seed + episode
                 obs, _ = raw.reset(seed=seed)
+                if teacher is not None:
+                    teacher.reset()
                 trajectory = []
                 writer = (
                     imageio.get_writer(output / f"{name}-{seed}.mp4", fps=raw.metadata["render_fps"])
@@ -79,9 +113,14 @@ def evaluate(args):
                             phase = min(int(raw.data.time / max(config.episode_seconds / 4, 0.02)), 3)
                             raw.set_command(*[(0, 0, 0), (0.5, 0, 0), (0.2, 0, 0.5), (0, 0, 0)][phase])
                             obs = raw._observation()
-                        action = (
-                            policy_action(model, vec, obs) if model is not None else np.zeros(raw.model.nu)
-                        )
+                        if teacher is not None:
+                            action = teacher.action(raw)
+                        else:
+                            action = (
+                                policy_action(model, vec, obs)
+                                if model is not None
+                                else np.zeros(raw.model.nu)
+                            )
                         obs, reward, terminated, truncated, info = raw.step(action)
                         trajectory.append({"scenario": name, "seed": seed, **info})
                         total += reward
@@ -107,6 +146,21 @@ def evaluate(args):
                 energy = sum(row["energy_j"] for row in trajectory)
                 distance = sum(row["distance_m"] for row in trajectory)
                 contact_samples = sum(row["contacting_feet"] for row in trajectory)
+                liftoffs = sum(
+                    bool(previous[f"{side}_foot_contact"]) and not bool(current[f"{side}_foot_contact"])
+                    for side in ("left", "right")
+                    for previous, current in zip(trajectory, trajectory[1:])
+                )
+                validated_steps = 0
+                for side in ("left", "right"):
+                    peak, air_seconds = 0.0, 0.0
+                    for row in trajectory:
+                        if not row[f"{side}_foot_contact"]:
+                            peak = max(peak, row[f"{side}_foot_clearance_m"])
+                            air_seconds += config.control_dt
+                        else:
+                            validated_steps += int(peak > 0.06 and air_seconds >= 0.06)
+                            peak, air_seconds = 0.0, 0.0
                 records.append(
                     {
                         "scenario": name,
@@ -123,6 +177,8 @@ def evaluate(args):
                         "energy_per_meter": energy / distance if distance > 0.1 else None,
                         "mean_power_w": energy / duration,
                         "x_progress_m": info["x_progress_m"],
+                        "foot_liftoffs": liftoffs,
+                        "validated_footsteps": validated_steps,
                         "contact_foot_slip_mps": sum(r["foot_slip_sum_mps"] for r in trajectory)
                         / contact_samples
                         if contact_samples
@@ -136,8 +192,9 @@ def evaluate(args):
         finally:
             vec.close() if vec is not None else raw.close()
     write_csv(output / "episodes.csv", records)
+    (output / "environments.json").write_text(json.dumps(environments, indent=2))
     summary = {}
-    for name, _ in scenarios(args.suite, args.seconds):
+    for name, _ in cases:
         rows = [r for r in records if r["scenario"] == name]
         metrics = {}
         for key in ("velocity_rmse_mps", "yaw_rmse_radps", "duration_s", "mean_power_w"):

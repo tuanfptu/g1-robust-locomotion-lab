@@ -1,0 +1,2 @@
+scenario,seed,return,duration_s,survived,velocity_rmse_mps,yaw_rmse_radps,energy_j,distance_m,energy_per_meter,mean_power_w,x_progress_m,foot_liftoffs,validated_footsteps,contact_foot_slip_mps,delivered_impulse_ns,push_received,recovery_time_s
+configured,10000,4708.645405180533,30.0,True,0.07858789412974612,0.2082125347140364,1184.9928139125518,7.6871908927103885,154.15160498177002,39.49976046375173,6.820285877025247,75,74,0.04356622488831223,0.0,False,

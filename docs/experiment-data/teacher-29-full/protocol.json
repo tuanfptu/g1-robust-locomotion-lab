@@ -1,0 +1,13 @@
+{
+  "operation": "eval",
+  "bundle": null,
+  "teacher": "vendor/unitree_rl_gym",
+  "output": "artifacts/autonomous-1660/teacher-29-full",
+  "suite": "full",
+  "episodes": 3,
+  "seconds": 30.0,
+  "seed": 10000,
+  "video": false,
+  "config": null,
+  "scenario": null
+}

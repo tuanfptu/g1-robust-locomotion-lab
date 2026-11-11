@@ -11,3 +11,16 @@ Position actuator gains and force limits are from the upstream basic G1 model; t
 starting point and do not certify physical robot fidelity.
 
 Stable-Baselines3 supplies PPO. This project does not claim to introduce PPO or the G1 model.
+
+## Optional Unitree teacher
+
+The optional experiment scripts fetch `unitreerobotics/unitree_rl_gym` at commit
+`276801e46c5d433564f24658bac64f254b7d2d4b` into ignored `vendor/`:
+https://github.com/unitreerobotics/unitree_rl_gym
+
+Its `deploy/pre_train/g1/motion.pt` is an upstream pretrained recurrent policy. Our adapter uses
+the observation scaling, 0.8 s phase, PD gains and default leg pose from the accompanying
+`deploy/deploy_mujoco/configs/g1.yaml` and deployment implementation.
+The upstream policy and model files are not redistributed in this repository.
+Student checkpoints in the local experiments are initialized through imitation of this teacher;
+their success is not evidence of learning locomotion from scratch.

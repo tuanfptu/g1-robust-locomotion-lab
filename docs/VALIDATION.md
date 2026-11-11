@@ -1,5 +1,8 @@
 # Validation on the development machine
 
+This file records initial pipeline checks. See EXPERIMENT_1660.md for the later actual
+training, imitation initialization, DAgger and PPO fine-tuning campaign.
+
 Tested 2026-11-11, Linux, Python 3.10.12, Ryzen 5 4600H, 16 GB RAM,
 GTX 1660 Ti Mobile 6144 MiB, NVIDIA driver 595.99.02.
 

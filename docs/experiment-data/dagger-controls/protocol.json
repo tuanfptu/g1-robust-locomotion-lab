@@ -1,0 +1,13 @@
+{
+  "operation": "eval",
+  "bundle": "runs/autonomous-1660/dagger-42/round-7",
+  "teacher": null,
+  "output": "artifacts/autonomous-1660/dagger-controls",
+  "suite": "flat",
+  "episodes": 3,
+  "seconds": 30.0,
+  "seed": 10000,
+  "video": false,
+  "config": null,
+  "scenario": null
+}

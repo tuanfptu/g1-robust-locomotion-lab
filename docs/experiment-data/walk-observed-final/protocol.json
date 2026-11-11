@@ -1,0 +1,12 @@
+{
+  "operation": "eval",
+  "bundle": "runs/autonomous-1660/walk-observed-42/final",
+  "output": "artifacts/autonomous-1660/walk-observed-final",
+  "suite": "flat",
+  "episodes": 3,
+  "seconds": 30.0,
+  "seed": 10000,
+  "video": false,
+  "config": "configs/walk-observed.json",
+  "scenario": null
+}

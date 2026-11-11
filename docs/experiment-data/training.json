@@ -1,0 +1,68 @@
+{
+  "runs/autonomous-1660/walk-observed-42": {
+    "elapsed_seconds": 369.71242959999654,
+    "additional_timesteps": 131072,
+    "steps_per_second": 354.52419098219366,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-campaign/commands": {
+    "elapsed_seconds": 52.0232654089923,
+    "additional_timesteps": 16384,
+    "steps_per_second": 314.9360170145721,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-campaign/slope": {
+    "elapsed_seconds": 47.25592836900614,
+    "additional_timesteps": 16384,
+    "steps_per_second": 346.7078219702443,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-campaign/robust": {
+    "elapsed_seconds": 49.276684449010645,
+    "additional_timesteps": 16384,
+    "steps_per_second": 332.4899023381625,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-campaign/rough": {
+    "elapsed_seconds": 50.56499865699152,
+    "additional_timesteps": 16384,
+    "steps_per_second": 324.018598539696,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/stand-42": {
+    "elapsed_seconds": 140.28519037700607,
+    "additional_timesteps": 32768,
+    "steps_per_second": 233.58132039410876,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/walk-slow-42": {
+    "elapsed_seconds": 144.91018857200106,
+    "additional_timesteps": 48796,
+    "steps_per_second": 336.7327065188028,
+    "interrupted": true
+  },
+  "runs/autonomous-1660/ppo-anchored/commands": {
+    "elapsed_seconds": 23.08992700499948,
+    "additional_timesteps": 8192,
+    "steps_per_second": 354.7867430774576,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-anchored/slope": {
+    "elapsed_seconds": 22.179443961998913,
+    "additional_timesteps": 8192,
+    "steps_per_second": 369.35100871039594,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-anchored/robust": {
+    "elapsed_seconds": 24.210739845992066,
+    "additional_timesteps": 8192,
+    "steps_per_second": 338.3622331292009,
+    "interrupted": false
+  },
+  "runs/autonomous-1660/ppo-anchored/rough": {
+    "elapsed_seconds": 23.74536832200829,
+    "additional_timesteps": 8192,
+    "steps_per_second": 344.99359575767375,
+    "interrupted": false
+  }
+}

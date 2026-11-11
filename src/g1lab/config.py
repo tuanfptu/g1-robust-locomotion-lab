@@ -21,6 +21,13 @@ class EnvConfig:
     push_angle: float = 0.0
     push_at: float = 5.0
     push_duration: float = 0.1
+    tracking_sigma: float = 0.25
+    linear_velocity_observation: bool = False
+    action_scale: float = 0.35
+    crouched_home: bool = False
+    unitree_pd: bool = False
+    phase_observation: bool = False
+    leg_only: bool = False
 
     def __post_init__(self):
         if self.terrain not in {"flat", "slope", "rough", "stairs"}:
@@ -36,6 +43,8 @@ class EnvConfig:
                 self.friction,
                 self.mass_scale,
                 self.push_duration,
+                self.tracking_sigma,
+                self.action_scale,
             )
             <= 0
         ):

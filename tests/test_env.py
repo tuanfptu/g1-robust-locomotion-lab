@@ -20,6 +20,8 @@ def test_seeded_rollout_and_terrain(terrain):
             obs, reward, done, truncated, info = env.step(np.zeros(29))
             assert np.isfinite(obs).all() and np.isfinite(reward)
             assert info["energy_j"] >= 0
+            assert info["upright"] == pytest.approx(env.data.xmat[env.pelvis].reshape(3, 3)[2, 2])
+            assert info["reward_upright"] == pytest.approx(0.5 * info["upright"])
             if done or truncated:
                 env.reset(seed=7)
         if terrain == "stairs":

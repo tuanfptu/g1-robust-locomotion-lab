@@ -1,0 +1,13 @@
+{
+  "random_commands": true,
+  "episode_seconds": 30,
+  "tracking_sigma": 0.04,
+  "linear_velocity_observation": true,
+  "crouched_home": true,
+  "unitree_pd": true,
+  "phase_observation": true,
+  "action_scale": 1.0,
+  "domain_randomization": true,
+  "pushes": true,
+  "leg_only": true
+}

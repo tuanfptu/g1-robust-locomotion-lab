@@ -1,0 +1,12 @@
+{
+  "operation": "eval",
+  "bundle": "runs/autonomous-1660/stand-42/checkpoints/step-8192",
+  "output": "artifacts/autonomous-1660/stand-video",
+  "suite": "flat",
+  "episodes": 1,
+  "seconds": 10.0,
+  "seed": 10000,
+  "video": true,
+  "config": null,
+  "scenario": "stand"
+}

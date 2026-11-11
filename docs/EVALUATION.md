@@ -5,6 +5,10 @@
 - Cùng suite, thời lượng, danh sách seed, miền lệnh và phiên bản environment.
 - Actor nhận angular velocity, projected gravity, command, joint position/velocity,
   previous action và 15 điểm terrain scan. Không nhận trực tiếp base linear velocity.
+  Đây là observation gốc 111 chiều. Các run mới có thể bật vận tốc thân (+3) và phase
+  sin/cos (+2), thành 116 chiều; bundle lưu hợp đồng observation và actuator để tải đúng.
+  Profile teacher/student dùng tư thế gối cong, PD chân theo cấu hình Unitree, action scale 1 rad,
+  12 khớp chân hoạt động và 17 action thân trên bị mask về 0; so sánh với profile gốc cần ghi rõ.
 - Vận tốc bám lệnh đo tại pelvis trong hệ thân; lực đẩy theo hệ tọa độ thế giới.
 - Ngã: pelvis thấp hơn địa hình tại vị trí base 0.45 m hoặc trục đứng pelvis có
   thành phần Z dưới 0.45. Horizon hết được xem là survived, không đồng nghĩa vượt địa hình.
@@ -22,6 +26,9 @@
 - Energy/m dùng độ dài quỹ đạo XY, chỉ báo khi tổng quãng đường > 0.1 m.
 - Foot slip là tốc độ ngang tại foot site khi bàn chân tiếp xúc terrain,
   trung bình theo số foot-contact samples; null nếu không có contact sample.
+- `validated_footsteps` đếm lần chân đáp lại sau ít nhất 0.06 s không tiếp xúc và foot-site
+  từng cao trên 0.06 m so với terrain. Đây là kiểm tra có nhấc/đặt chân, không phải đánh giá
+  tính tự nhiên của dáng đi. Chu kỳ phase của profile student được đặt sẵn 0.8 s.
 - Push impulse ghi từ force × physics dt thực sự áp dụng. Push bị bỏ lỡ do ngã sớm
   có `push_received=false`; không dùng episode đó để khẳng định chịu được lực đẩy.
 - Recovery time: sau khi lực đẩy kết thúc, sai số vận tốc < 0.15 m/s và upright > 0.9
