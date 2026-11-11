@@ -18,6 +18,9 @@ GTX 1660 Ti Mobile 6144 MiB, NVIDIA driver 595.99.02.
 - Report: summary JSON/episode CSV rendered to PNG and Markdown.
 - Video: all five flat scenarios, one episode each, 1-second horizon, MP4 output.
 - EGL rendering outside sandbox reports `NVIDIA GeForce GTX 1660 Ti/PCIe/SSE2`, 640×480 RGB.
+- Built a distributable wheel with build isolation; verified G1 XML/license/meshes and reset the
+  environment from an extracted wheel, independently of the editable source package.
+- Venv-only dependency check passes with system ROS `PYTHONPATH` removed.
 
 Two expected Gymnasium warnings: unbounded observation Box. Observation values are checked for
 finiteness and policy inputs use VecNormalize. No failure was suppressed.
