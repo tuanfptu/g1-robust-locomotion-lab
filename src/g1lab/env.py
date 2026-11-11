@@ -208,6 +208,10 @@ class G1Env(gym.Env):
             self._sample_command()
         self.next_push = self.np_random.uniform(3, 6)
         self.spawn_x = float(self.data.qpos[0])
+        if cfg.task == "recovery":
+            from .recovery import reset_recovery
+
+            reset_recovery(self)
         return self._observation(), {}
 
     def step(self, action):
@@ -317,6 +321,11 @@ class G1Env(gym.Env):
             raise FloatingPointError("MuJoCo produced non-finite observation")
         if self.render_mode == "human":
             self.render()
+        if cfg.task == "recovery":
+            from .recovery import recovery_reward
+
+            reward, success = recovery_reward(self, action, info)
+            return obs, reward, success, truncated, info
         return obs, float(sum(reward_terms.values())), bool(fallen), truncated, info
 
     def render(self):

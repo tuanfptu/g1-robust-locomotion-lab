@@ -145,6 +145,7 @@ def train(args):
     if len(configs) > args.envs:
         raise ValueError("Use at least one environment per mixed configuration")
     contract = (
+        "task",
         "control_dt",
         "physics_dt",
         "linear_velocity_observation",
@@ -271,6 +272,7 @@ def load_policy(bundle, config):
     if specification.exists():
         contract = json.loads(specification.read_text())
         fields = (
+            "task",
             "control_dt",
             "physics_dt",
             "linear_velocity_observation",

@@ -1,0 +1,11 @@
+{
+  "task": "recovery",
+  "recovery_pose": "supine",
+  "terrain": "flat",
+  "random_commands": false,
+  "command": [0, 0, 0],
+  "episode_seconds": 12,
+  "action_scale": 1.5,
+  "linear_velocity_observation": true,
+  "leg_only": false
+}

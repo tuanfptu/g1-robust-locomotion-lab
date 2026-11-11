@@ -1,0 +1,7 @@
+{
+  "bundle": null,
+  "config": "configs/recovery-supine.json",
+  "output": "artifacts/recovery-supine-1660-v1/pd-baseline",
+  "episodes": 5,
+  "seed": 60000
+}

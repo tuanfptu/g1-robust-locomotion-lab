@@ -1,0 +1,8 @@
+{
+  "bundle": "runs/recovery-supine-1660-v1/checkpoints/step-16384",
+  "config": "configs/recovery-supine.json",
+  "output": "artifacts/recovery-supine-1660-v1/dev-16384",
+  "episodes": 3,
+  "seed": 61000,
+  "video": false
+}

@@ -4,6 +4,10 @@
 
 Unitree G1 29 khớp • MuJoCo CPU • PPO / Stable-Baselines3 • Python 3.10+
 
+Mốc mới: [môi trường tự đứng dậy từ nằm ngửa](docs/RECOVERY.md), dùng PPO khởi tạo ngẫu nhiên
+và điều khiển toàn thân. Đây là pilot phát triển môi trường, chưa phải policy đứng dậy đã hội tụ;
+checkpoint đi hiện tại vẫn được giữ riêng.
+
 ![G1 trong môi trường mô phỏng, chưa phải policy đã học](docs/images/g1-stairs.png)
 
 Mục tiêu: học đi theo lệnh vận tốc, đánh giá khả năng giữ thăng bằng và mở rộng sang địa hình.

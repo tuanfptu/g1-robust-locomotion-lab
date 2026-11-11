@@ -53,6 +53,10 @@ def write_csv(path, rows):
 def evaluate(args):
     # Small single-observation MLPs do not benefit from a large BLAS thread pool.
     torch.set_num_threads(1)
+    if args.bundle:
+        specification = Path(args.bundle) / "env_config.json"
+        if specification.exists() and json.loads(specification.read_text()).get("task") == "recovery":
+            raise ValueError("Use scripts/evaluate_recovery.py for recovery success metrics")
     if args.bundle and getattr(args, "teacher", None):
         raise ValueError("Choose either --bundle or --teacher")
     teacher = None

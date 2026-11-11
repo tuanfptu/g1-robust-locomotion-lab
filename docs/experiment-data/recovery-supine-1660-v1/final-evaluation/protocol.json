@@ -1,0 +1,8 @@
+{
+  "bundle": "runs/recovery-supine-1660-v1/final",
+  "config": "configs/recovery-supine.json",
+  "output": "artifacts/recovery-supine-1660-v1/final-evaluation",
+  "episodes": 5,
+  "seed": 60000,
+  "video": false
+}

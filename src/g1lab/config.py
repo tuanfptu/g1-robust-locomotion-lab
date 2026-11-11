@@ -5,6 +5,8 @@ from dataclasses import asdict, dataclass
 
 @dataclass
 class EnvConfig:
+    task: str = "locomotion"
+    recovery_pose: str = "supine"
     terrain: str = "flat"
     difficulty: float = 0.0
     episode_seconds: float = 20.0
@@ -30,6 +32,12 @@ class EnvConfig:
     leg_only: bool = False
 
     def __post_init__(self):
+        if self.task not in {"locomotion", "recovery"}:
+            raise ValueError("Unknown task")
+        if self.recovery_pose not in {"supine", "prone", "side"}:
+            raise ValueError("Unknown recovery pose")
+        if self.task == "recovery" and (self.terrain != "flat" or self.leg_only):
+            raise ValueError("Recovery requires flat terrain and full-body actions")
         if self.terrain not in {"flat", "slope", "rough", "stairs"}:
             raise ValueError(f"Unknown terrain: {self.terrain}")
         if not 0 <= self.difficulty <= 1:

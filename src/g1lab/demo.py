@@ -38,6 +38,9 @@ def demo(args):
         print("PD diagnostic mode: no learned walking policy is loaded.")
     obs, _ = env.reset(seed=args.seed)
     automatic = getattr(args, "auto", False)
+    if config.task == "recovery":
+        automatic = False
+        print("Recovery pilot: starts lying down; success requires one second of stable standing.")
     if model is not None and hasattr(model, "bootstrap_origin"):
         print("Student initialized from Unitree teacher; see checkpoint origin.json for provenance.")
     if automatic:
