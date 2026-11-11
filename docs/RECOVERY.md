@@ -58,3 +58,17 @@ The final checkpoint is selected by the fixed step budget, not by test-seed perf
 65,536 transitions, 241.54 seconds of training, 271.33 transitions/s on the existing CPU backend. Final budget-selected policy: **0/5 successful recoveries** on seeds 60000–60004. Nominal PD: **0/5** on the same seeds. Mean maximum pelvis height was 0.105 m for the learned policy versus 0.061 m for PD; the learned policy still remained near the floor. Increased shaped reward is not evidence of learning to stand.
 
 Development probes at 16,384 and 32,768 transitions were also 0/3. Full-body supine recovery has **not** been solved by this pilot. The locomotion default is unchanged. Compact protocol, training and per-episode evidence are in `experiment-data/recovery-supine-1660-v1/`; model weights remain local under `runs/recovery-supine-1660-v1/final`.
+
+## Combined stress-test video
+
+`scripts/sprint_recovery_video.py` uses the current locomotion and recovery checkpoints to render a real-physics rollout, without retraining or animation. Forward command starts at zero, then 0.3 m/s, then ramps toward 2 m/s. A 40 Ns lateral stress impulse is scheduled at 14 s only if the locomotion controller has not already fallen. Physical qpos/qvel and simulation time are copied across the controller handoff; the robot is not reset to a convenient recovery pose. The target controller has its own PD gains and observation/action normalization. This transition is a prototype, not a validated hybrid controller.
+
+At seed 63000, the robot fell at 11.00 s, before the scheduled impulse. Peak horizontal speed measured before the fall was 1.843 m/s; this is a transient peak, not sustained running performance or verified running gait. The recovery pilot did not stand up during the remainder of the 26-second video. This combined attempt starts from the actual fall, unlike the supine-only recovery training distribution.
+
+```bash
+MUJOCO_GL=egl EGL_PLATFORM=surfaceless MPLCONFIGDIR=/tmp/g1lab-mpl \
+  .venv/bin/python scripts/sprint_recovery_video.py \
+  --output artifacts/sprint-recovery-pilot-v1
+```
+
+The MP4 and trajectory are local under that output directory. Compact summary/protocol are retained in `experiment-data/sprint-recovery-pilot-v1/`. This is a demonstration of current limitations, not a successful sprint-and-get-up demonstration.

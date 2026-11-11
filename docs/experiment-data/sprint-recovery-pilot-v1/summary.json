@@ -1,0 +1,14 @@
+{
+  "events": [
+    {
+      "time_s": 11.0,
+      "event": "fall detected; handoff to recovery pilot"
+    }
+  ],
+  "max_horizontal_speed_before_fall_mps": 1.8428662948776235,
+  "recovered": false,
+  "recovery_success_at_s": null,
+  "final_mode": "RECOVERY ATTEMPT",
+  "duration_s": 26,
+  "note": "No animation, pose teleportation or speed-up. This is not a validated FSM controller."
+}

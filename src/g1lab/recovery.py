@@ -52,3 +52,29 @@ def recovery_reward(env, action, info):
     info.update({f"reward_{key}": float(value) for key, value in terms.items()})
     info.update(recovery_success=success, recovery_stable=bool(stable), recovery_hold_s=env.recovery_hold)
     return float(sum(terms.values())), success
+
+
+def transfer_state(source, target):
+    """Preserve physical pose/velocity across controllers; never reset to standing."""
+    for attribute in ("nq", "nv", "nu"):
+        if getattr(source.model, attribute) != getattr(target.model, attribute):
+            raise ValueError("Controller models must share dimensions")
+    for kind, count in (
+        (mujoco.mjtObj.mjOBJ_JOINT, source.model.njnt),
+        (mujoco.mjtObj.mjOBJ_BODY, source.model.nbody),
+    ):
+        if any(
+            mujoco.mj_id2name(source.model, kind, i) != mujoco.mj_id2name(target.model, kind, i)
+            for i in range(count)
+        ):
+            raise ValueError("Controller model indexing differs")
+    target.data.qpos[:] = source.data.qpos
+    target.data.qvel[:] = source.data.qvel
+    target.data.time = source.data.time
+    target.data.qacc_warmstart[:] = source.data.qacc_warmstart
+    target.previous_action[:] = 0
+    target.manual_impulse[:] = 0
+    target.step_count = 0
+    target.recovery_hold = 0.0
+    target.spawn_x = float(target.data.qpos[0])
+    mujoco.mj_forward(target.model, target.data)

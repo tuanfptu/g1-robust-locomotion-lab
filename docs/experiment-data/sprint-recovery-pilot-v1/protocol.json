@@ -1,0 +1,77 @@
+{
+  "args": {
+    "walk": "runs/autonomous-1660/selected-terrain",
+    "recovery": "runs/recovery-supine-1660-v1/final",
+    "output": "artifacts/sprint-recovery-pilot-v1",
+    "seconds": 26,
+    "seed": 63000
+  },
+  "purpose": "Current-policy stress test, not trained sprint/recovery",
+  "environment_walk": {
+    "task": "locomotion",
+    "recovery_pose": "supine",
+    "terrain": "flat",
+    "difficulty": 0.0,
+    "episode_seconds": 26,
+    "control_dt": 0.02,
+    "physics_dt": 0.002,
+    "command": [
+      0,
+      0,
+      0
+    ],
+    "random_commands": false,
+    "command_interval": 4.0,
+    "domain_randomization": false,
+    "pushes": false,
+    "friction": 0.8,
+    "mass_scale": 1.0,
+    "push_impulse": 0.0,
+    "push_angle": 0.0,
+    "push_at": 5.0,
+    "push_duration": 0.1,
+    "tracking_sigma": 0.25,
+    "linear_velocity_observation": true,
+    "action_scale": 1.0,
+    "crouched_home": true,
+    "unitree_pd": true,
+    "phase_observation": true,
+    "leg_only": true
+  },
+  "environment_recovery": {
+    "task": "recovery",
+    "recovery_pose": "supine",
+    "terrain": "flat",
+    "difficulty": 0.0,
+    "episode_seconds": 26,
+    "control_dt": 0.02,
+    "physics_dt": 0.002,
+    "command": [
+      0,
+      0,
+      0
+    ],
+    "random_commands": false,
+    "command_interval": 4.0,
+    "domain_randomization": false,
+    "pushes": false,
+    "friction": 0.8,
+    "mass_scale": 1.0,
+    "push_impulse": 0.0,
+    "push_angle": 0.0,
+    "push_at": 5.0,
+    "push_duration": 0.1,
+    "tracking_sigma": 0.25,
+    "linear_velocity_observation": true,
+    "action_scale": 1.5,
+    "crouched_home": false,
+    "unitree_pd": false,
+    "phase_observation": false,
+    "leg_only": false
+  },
+  "handoff": "Copies qpos/qvel/time, changes to target policy PD/observation/action contract; unvalidated transition",
+  "policy_sha256": {
+    "runs/autonomous-1660/selected-terrain": "26e062e3d475bbdeef55654b0b782e18b49c6b7cc25b9a27de6fd69516aa4d9d",
+    "runs/recovery-supine-1660-v1/final": "4aac1c91551aff5bc9827345888b6010cff8ab7fe52cb71cbcf92ceb53e4d79c"
+  }
+}

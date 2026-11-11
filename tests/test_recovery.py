@@ -84,3 +84,26 @@ def test_recovery_checkpoint_restores_task_and_rejects_locomotion_evaluator(tmp_
             evaluate(SimpleNamespace(bundle=str(tmp_path / "checkpoint")))
     finally:
         vec.close()
+
+
+def test_controller_handoff_preserves_physical_pose_and_velocity():
+    from g1lab.recovery import transfer_state
+
+    source = G1Env(EnvConfig(unitree_pd=True, leg_only=True))
+    target = G1Env(EnvConfig(task="recovery", action_scale=1.5))
+    try:
+        source.reset(seed=42)
+        target.reset(seed=42)
+        source.step(np.zeros(29))
+        pose, velocity = source.data.qpos.copy(), source.data.qvel.copy()
+        transfer_state(source, target)
+        np.testing.assert_array_equal(target.data.qpos, pose)
+        np.testing.assert_array_equal(target.data.qvel, velocity)
+        assert target.data.time == source.data.time
+        assert target.step_count == 0
+        assert target.config.task == "recovery" and not target.config.leg_only
+        assert target.config.action_scale == 1.5
+        assert np.isfinite(target._observation()).all()
+    finally:
+        source.close()
+        target.close()
