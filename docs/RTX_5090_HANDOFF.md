@@ -5,7 +5,7 @@ Chưa có truy cập máy RTX nên chưa xác nhận thời gian train, thông l
 
 ## Mang theo gì?
 
-- Clone repo, checkout nhánh `codex/1660-diagnostics-handoff` (commit bàn giao được ghi trong báo cáo gửi người dùng).
+- Clone repo và dùng nhánh `main`; mã và kết quả bàn giao đã được hợp nhất vào nhánh này.
 - Chạy `bash scripts/fetch_lab.sh` để tải lại đúng revision policy và mô hình Unitree.
 - Mang theo `artifacts/controller-1660-v1/` và `artifacts/controller-1660-render/` nếu muốn xem toàn bộ
   trajectory/video. Các bảng kết quả nhỏ đã nằm trong Git; không cần chuyển `.venv`, cache hay token.
