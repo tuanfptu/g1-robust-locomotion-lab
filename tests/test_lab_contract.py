@@ -24,6 +24,8 @@ def test_fast_stage_keeps_limits_and_does_not_resume_onnx(tmp_path):
     assert "env.rewards.gait.params.threshold=0.45" in args
     assert "agent.algorithm.learning_rate=0.0001" in args
     assert "--resume" in args
+    # Upstream train.py ignores --experiment_name, so resume staging relies on this Hydra override.
+    assert "agent.experiment_name=g1_fast" in args
     assert args[args.index("--checkpoint") + 1] == r"model\.pt"
     path_args = command(tmp_path, "python", tmp_path / "robot with spaces.usd", 1.0)
     assert any('spawn.usd_path="' in a and 'robot with spaces.usd"' in a for a in path_args)
@@ -62,3 +64,49 @@ def test_native_lab_policy_joint_mapping_and_repeatability():
     assert all(0 <= r["requested_torque_clipped_fraction"] <= 1 for r in diagnostic_rows)
     assert all(0 <= r["peak_torque_utilization"] <= 1.00001 for r in diagnostic_rows)
     assert all(0 <= r["feet_in_contact"] <= 2 for r in diagnostic_rows)
+
+
+def test_isaac_launch_uses_v0_gain_task_and_guards_warmup(tmp_path):
+    from g1lab.fast_plan import WRAPPER
+    from g1lab.isaac_tasks import V0_GAINS_TASK
+
+    args = command(tmp_path, "python", tmp_path / "robot.usd", 1.0)
+    assert args[1] == str(WRAPPER) and WRAPPER.is_file()
+    assert args[args.index("--task") + 1] == V0_GAINS_TASK
+    assert "--critic_warmup" not in args
+    resumed = command(
+        tmp_path,
+        "python",
+        tmp_path / "robot.usd",
+        1.0,
+        iterations=10,
+        checkpoint=tmp_path / "r/m.pt",
+        critic_warmup=3,
+    )
+    assert resumed[resumed.index("--critic_warmup") + 1] == "3"
+    with pytest.raises(ValueError, match="warm-up"):
+        command(tmp_path, "python", tmp_path / "robot.usd", 1.0, critic_warmup=3)
+    with pytest.raises(ValueError, match="warm-up"):
+        command(
+            tmp_path,
+            "python",
+            tmp_path / "robot.usd",
+            1.0,
+            iterations=3,
+            checkpoint=tmp_path / "m.pt",
+            critic_warmup=3,
+        )
+
+
+@pytest.mark.skipif(not Path("vendor/unitree_rl_lab").is_dir(), reason="vendor not installed")
+def test_v0_gain_task_matches_public_onnx_deploy_gains():
+    yaml = pytest.importorskip("yaml")
+    from g1lab.isaac_tasks import V0_DAMPING_SDK, V0_STIFFNESS_SDK
+
+    deploy = yaml.safe_load(
+        Path(
+            "vendor/unitree_rl_lab/deploy/robots/g1_29dof/config/policy/velocity/v0/params/deploy.yaml"
+        ).read_text()
+    )
+    assert deploy["stiffness"] == V0_STIFFNESS_SDK
+    assert deploy["damping"] == V0_DAMPING_SDK

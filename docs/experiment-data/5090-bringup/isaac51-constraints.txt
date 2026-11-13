@@ -1,0 +1,8 @@
+# Keep the Blackwell-capable CUDA 12.8 build installed with Isaac Sim 5.1 / Isaac Lab 2.3.2.
+torch==2.7.0
+torchvision==0.22.0
+# flatdict 4.0.1 builds with pkg_resources, removed from setuptools>=81.
+setuptools<81
+psutil==5.9.8
+# Isaac Lab 2.3.2 deliberately pins starlette 0.49.1 over isaacsim fastapi metadata.
+starlette==0.49.1

@@ -4,11 +4,14 @@ import argparse
 import importlib.metadata
 import importlib.util
 import json
+import os
 import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from g1lab.gpu import pin_cuda
 
 
 def collect(usd=None):
@@ -74,6 +77,7 @@ def collect(usd=None):
         "disk_free_gib": usage.free / 2**30,
         "packages": packages,
         "nvidia_smi": gpu,
+        "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
         "cuda": cuda,
         "usd": str(usd) if usd else None,
         "blockers": blockers,
@@ -89,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--usd")
     parser.add_argument("--require-training", action="store_true")
     args = parser.parse_args()
+    pin_cuda()
     report = collect(args.usd)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

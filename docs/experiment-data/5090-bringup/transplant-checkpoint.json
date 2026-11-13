@@ -1,0 +1,9 @@
+{
+  "g1lab_init": "onnx_actor_transplant",
+  "onnx": "/home/toann/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/vendor/unitree_rl_lab/deploy/robots/g1_29dof/config/policy/velocity/v0/exported/policy.onnx",
+  "onnx_sha256": "610c27e463a8f666aa50a06346678c00b4df3859f10b54bcc1f817c28251406f",
+  "template": "/home/toann/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/vendor/unitree_rl_lab/logs/rsl_rl/g1_fast/2026-11-13_20-16-30_cap_1_seed_42/model_0.pt",
+  "std": 0.1,
+  "critic_seed": 0,
+  "note": "Critic untrained; actor exact copy of ONNX. Not a full checkpoint of the original run."
+}

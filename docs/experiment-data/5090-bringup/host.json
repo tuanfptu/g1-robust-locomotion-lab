@@ -1,0 +1,41 @@
+{
+  "python": "/home/toann/TUAN__HUMAN_NOID_G1_RUNNER/envs/isaac51/bin/python",
+  "python_version": "3.11.17",
+  "platform": "Linux-6.14.0-37-generic-x86_64-with-glibc2.39",
+  "memory": "MemTotal:       129431132 kB",
+  "disk_free_gib": 580.575496673584,
+  "packages": {
+    "torch": "2.7.0+cu128",
+    "mujoco": null,
+    "onnxruntime": null,
+    "isaacsim": "5.1.0.0",
+    "isaaclab": "0.54.2",
+    "isaaclab-rl": "0.4.7",
+    "rsl-rl-lib": "3.1.2"
+  },
+  "nvidia_smi": "NVIDIA GeForce RTX 5090, 595.99.02, 32607 MiB\nNVIDIA GeForce RTX 5090, 595.99.02, 32607 MiB",
+  "cuda": {
+    "available": true,
+    "torch_cuda_version": "12.8",
+    "tensor_smoke_passed": true,
+    "device": "NVIDIA GeForce RTX 5090",
+    "capability": [
+      12,
+      0
+    ],
+    "compiled_architectures": [
+      "sm_75",
+      "sm_80",
+      "sm_86",
+      "sm_90",
+      "sm_100",
+      "sm_120",
+      "compute_120"
+    ]
+  },
+  "usd": "/home/toann/TUAN__HUMAN_NOID_G1_RUNNER/assets/unitree_model/G1/29dof/usd/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd",
+  "blockers": [],
+  "preflight_passed": true,
+  "isaac_runtime_smoke_tested": false,
+  "note": "Even a passing preflight requires an Isaac 32-env short training smoke before scaling."
+}
