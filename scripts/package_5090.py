@@ -57,7 +57,12 @@ def main(output):
             if actual != expected or git("status", "--porcelain", cwd=source):
                 raise RuntimeError(f"Vendor revision/working tree differs: {name}")
             target = stage / "vendor" / name
-            shutil.copytree(source, target, ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"))
+            shutil.copytree(
+                source,
+                target,
+                symlinks=True,
+                ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+            )
             metadata = target / ".git"
             metadata.mkdir()
             # Keep only Git data needed to preserve exact public upstream identity.
