@@ -1,216 +1,200 @@
 # G1 Robust Locomotion Lab
 
-**Dự án RL humanoid chạy hoàn toàn trong mô phỏng, phát triển trên GTX 1660 Ti.**
+**Dự án RL cho humanoid Unitree G1 29 khớp, chạy hoàn toàn trong mô phỏng.**
+Hướng hiện tại: dạy G1 **chạy bứt tốc có pha bay**, giữ thăng bằng, giảm tốc và dừng được.
 
-Unitree G1 29 khớp • MuJoCo CPU • PPO / Stable-Baselines3 • Python 3.10+
+Isaac Sim 5.1 / Isaac Lab 2.3.2 (PhysX, train) • RSL-RL PPO • MuJoCo (đánh giá độc lập) • RTX 5090
 
-[Báo cáo dọn mã và 46 lượt thử trên 1660 Ti](docs/CLEANUP_1660_REPORT.md) ·
-[Chuẩn bị chuyển RTX 5090](docs/RTX_5090_HANDOFF.md).
+## Trạng thái hiện tại (13/11/2026)
 
-Mới nhất: [tích hợp Unitree RL Lab, điều khiển toàn thân 29 khớp](docs/UNITREE_RL_LAB.md).
-Policy ONNX công khai + vòng giữ hướng đạt **1,394 m/s thực tế**, qua 5/5 lượt giữ 60 giây
-rồi dừng trên mặt phẳng. Đây là inference và cải tiến điều khiển; chưa huấn luyện PPO mới.
+| Hạng mục | Trạng thái |
+|---|---|
+| Baseline tốt nhất đã kiểm chứng | Policy ONNX công khai của Unitree + vòng giữ hướng: **1,39 m/s**, 10/10 seed giữ 60 s rồi dừng (MuJoCo). Dáng **đi bộ**: 0% pha bay, tiếp đất bằng gót. Từ 2 m/s ngã. |
+| Tái hiện trên RTX 5090 | Khớp kết quả máy cũ tới 1e-15 (46/46 lượt), `episodes.csv` giống từng byte |
+| Pipeline train Isaac | Chạy được: smoke, resume, 512–16384 env, export ONNX → chấm MuJoCo |
+| Khởi tạo PPO | Ghép **chính xác** actor ONNX vào checkpoint RSL-RL + warm-up critic (ONNX chính là actor RSL-RL) |
+| Task Sprint | Đã dựng và kiểm chứng ở mức smoke: 12 term reward kỹ thuật chạy hoạt động, đúng dấu |
+| Autopilot | Vòng lặp train → đánh giá → giữ bản tốt nhất → tự xử lý → báo cáo, chạy không cần mạng; một lượt chạy không giới hạn đã khởi động 13/11/2026 |
+| **Chưa có** | Policy chạy nhanh hơn baseline đã kiểm chứng. Kết quả autopilot (checkpoint, báo cáo) nằm trong `artifacts/` trên máy train, không có trong Git |
 
-[Đo tốc độ policy Unitree gốc](docs/UNITREE_SPEED.md): lệnh 1,6 m/s qua 5/5 lượt giữ 60 giây,
-tốc độ tiến thực tế trung bình khoảng 1,33 m/s trên mô hình gốc 12 khớp chân, thân trên cố định.
-Đây là benchmark riêng, không phải kết quả của policy student trên mô hình 29 khớp.
+Mục tiêu gần: 2–3 m/s thực tế, giữ 60 s, có pha bay, giảm tốc và dừng, kiểm chứng trên 10 seed mới.
+11 m/s chỉ là trần của curriculum để nghiên cứu, **không phải cam kết**: bài báo SPRINT công bố khoảng
+6 m/s trên G1. Giới hạn mô-men, giới hạn vận tốc khớp, gain PD và mô hình robot không bị nới để làm đẹp
+kết quả.
 
-[Demo 16 môi trường độc lập](docs/SWARM_DEMO.md) đã chạy trên máy 1660 Ti: physics CPU,
-4 worker threads, dựng hình chung trên GPU. Đây là inference policy gốc, chưa có cập nhật PPO.
+## Luồng làm việc
 
-Pilot lưu trữ: [môi trường tự đứng dậy từ nằm ngửa](docs/RECOVERY.md), dùng PPO khởi tạo ngẫu nhiên
-và điều khiển toàn thân. Đây là pilot phát triển môi trường, chưa phải policy đứng dậy đã hội tụ;
-checkpoint đi hiện tại vẫn được giữ riêng. Hiện tập trung vào tốc độ và cân bằng, chưa tiếp tục pilot này.
-
-![G1 trong môi trường mô phỏng, chưa phải policy đã học](docs/images/g1-stairs.png)
-
-Mục tiêu: học đi theo lệnh vận tốc, đánh giá khả năng giữ thăng bằng và mở rộng sang địa hình.
-Mã cung cấp đầy đủ pipeline từ mô phỏng tới train/eval/report/demo. Chất lượng đi phải được
-xác nhận bằng huấn luyện và benchmark; repo không kèm policy đã hội tụ.
-
-## Thực nghiệm tự động trên máy 1660 Ti
-
-Đã chạy học đứng, các pilot PPO từ đầu, khởi tạo bằng teacher Unitree, DAgger và fine-tune PPO.
-Checkpoint và video nằm trong `runs/autonomous-1660/` và `artifacts/autonomous-1660/` tại máy
-phát triển (không được git theo dõi). Kết quả định lượng và giới hạn nằm trong
-[báo cáo thực nghiệm](docs/EXPERIMENT_1660.md).
-
-Đợt tiếp theo đã bổ sung PPO học xen kẽ nhiều môi trường và kiểm tra mất kỹ năng.
-Xem [kết quả trộn địa hình, gồm cả hồi quy quay tại chỗ](docs/EXPERIMENT_MIXED_1660.md)
-và [cách chạy tiếp trên máy hiện tại](docs/LOCAL_TRAINING.md). Bản trộn địa hình đầu tiên
-là ứng viên thực nghiệm; checkpoint mặc định trước đó vẫn được giữ.
-Đợt [giữ sáu kỹ năng bằng replay](docs/EXPERIMENT_PRESERVATION_1660.md) cũng được kiểm thử:
-quay hoàn thành 2/3 lượt thay vì 3/3 của bản cũ, nên chưa được đưa làm mặc định.
-
-Policy có khả năng đi hiện tại được khởi tạo từ **policy Unitree đã có sẵn**, không phải
-PPO tự học đi từ đầu. Robot vẫn là mô hình G1 29 khớp; ở chế độ này 12 khớp chân nhận
-action của policy, thân trên giữ tư thế bằng PD. Cấu hình actuator và observation được lưu
-trong từng bundle và tự khôi phục khi eval/demo.
-
-```bash
-bash scripts/fetch_teacher.sh
-g1lab eval --teacher vendor/unitree_rl_gym --output artifacts/teacher-check --episodes 3 --seconds 30
-g1lab bootstrap --run runs/bootstrap --samples 16000 --epochs 100
-python scripts/dagger.py --bundle runs/bootstrap/final --data runs/bootstrap/teacher-data.npz --run runs/dagger
-python scripts/finetune_campaign.py --bundle runs/dagger/round-7 --run runs/anchored \
-  --steps 8192 --anchor-data runs/dagger/aggregated-data.npz
+```text
+Isaac Lab (PhysX, GPU1)              export                 MuJoCo (CPU, độc lập)
+task Sprint, PPO 4096 env  ──►  policy.onnx + deploy.yaml  ──►  thang tốc độ, 10 seed mới,
+đánh giá thang tốc độ 1→11 m/s                                 giữ 60 s, dừng, số đo pha bay
 ```
 
-`round-7` là ví dụ checkpoint; chọn bằng validation seed riêng trước khi chạy đánh giá cuối.
-Fine-tune có anchor là **PPO + BC anchoring**, không phải PPO thuần. Script lưu cả các ứng viên
-bị loại khi làm mất khả năng đi. Chạy lại thực nghiệm không bảo đảm cùng chất lượng.
+Isaac là simulator để **train**; MuJoCo là simulator **chấm kết quả**. Hai simulator không được mặc định
+cho cùng kết quả, nên mọi con số đều ghi rõ đo bằng simulator nào.
 
-```bash
-g1lab demo --bundle runs/dagger/round-7 --auto
-```
+## Phát hiện quan trọng
 
-`--auto` tự chạy chu kỳ đứng → đi → quay nhẹ → dừng. Không truyền `--auto` để điều khiển bằng phím.
+- **Gain PD.** `deploy.yaml` đi kèm ONNX v0 dùng kp = 200 ở eo roll/pitch và kd = 10 ở 14 khớp tay; robot
+  config của revision Unitree đang ghim dùng 40 và 1. Với gain v0, actor ONNX đi được trong PhysX (100% sống
+  ở 1,5 m/s, 1,37 m/s, gần MuJoCo); với gain vendor nó ngã hết từ 1 m/s. Mọi task của dự án dùng gain v0
+  (`Unitree-G1-29dof-Velocity-G1LabV0Gains`), đăng ký phía project, không sửa vendor.
+- **Resume.** `train.py` của vendor bỏ qua `--experiment_name`; launcher dùng Hydra override
+  `agent.experiment_name` để resume tìm đúng checkpoint.
+- **Lực ngang.** Cảm biến tiếp xúc Isaac chỉ cho lực pháp tuyến; lực đẩy ngang được tính từ Σ mᵢaᵢ.
+- **Chạy offline.** Mặt đất "plane" mặc định tải từ cloud NVIDIA; task Sprint dùng mặt đất sinh tại chỗ.
 
-Checkpoint có sẵn tại máy phát triển:
+## Task Sprint
 
-```bash
-# Mặc định: đứng/đi/ngang/quay, có thích nghi dốc nhẹ
-g1lab demo --bundle runs/autonomous-1660/selected-terrain --auto
-# Bản trước thích nghi dốc giữ tỷ lệ vượt rough thấp tốt hơn
-g1lab demo --bundle runs/autonomous-1660/selected --terrain rough --difficulty 0.2 --auto
-```
+`Unitree-G1-29dof-Sprint-G1Lab` ([src/g1lab/isaac_sprint.py](src/g1lab/isaac_sprint.py)) giữ nguyên quan sát
+và action (480 → 29), nên vẫn ghép được actor ONNX.
 
-Hai checkpoint được đóng gói local trong `artifacts/g1-1660-checkpoints.zip`.
+- **Cổng tốc độ:** dưới 1,6 m/s, reward giống task đi bộ mà ONNX được train. Từ 1,6 đến 2,2 m/s, reward
+  chuyển dần sang bộ reward chạy nước rút.
+- **Reward kỹ thuật chạy:** pha bay; phạt hai chân cùng chạm; chạm đất ngắn (trần thời gian giảm theo tốc
+  độ); thời gian bay của chân; lực đẩy ngang; tiếp đất bằng mũi chân; nâng gối; gập cổ chân khi vung; tay
+  vung ngược pha chân cùng bên; đổ người theo tốc độ **và** gia tốc.
+- **Pha bước không dùng đồng hồ:** cảm biến bàn chân ngưỡng 20 N, khử nhiễu 40 ms.
+- **Lệnh tốc độ có giới hạn gia tốc:** mỗi tập xuất phát từ đứng yên, có lệnh giảm tốc và dừng. Curriculum
+  mở dải tốc độ tới trần 3,5 m/s; autopilot nâng trần lên 11 m/s.
 
-## Vì sao dùng CPU MuJoCo ở bản này?
-
-Máy phát triển có GTX 1660 Ti Mobile 6 GB và Ryzen 5 4600H. MuJoCo chuẩn chạy physics
-trên CPU; PPO MLP nhỏ mặc định dùng CPU, không đòi hỏi CUDA. GPU có thể dùng cho render.
-Đây là environment riêng dựa trên Menagerie,
-**không phải bản huấn luyện mjlab**. Đổi `--device cuda` chỉ chuyển mạng PPO, không đưa physics lên GPU.
+Chi tiết trọng số và số liệu kiểm chứng: [docs/SPRINT_TASK.md](docs/SPRINT_TASK.md).
 
 ## Cài đặt
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
-python -m pip install -e '.[dev]'
-g1lab doctor
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q
-```
+Dùng **hai môi trường riêng**; không cài Torch CPU vào môi trường train.
 
-G1 XML và meshes đã nằm trong repo, không cần tải robot khi chạy. Giấy phép nguồn ở
-`src/g1lab/assets/g1/LICENSE`, provenance ở [THIRD_PARTY.md](THIRD_PARTY.md).
-Trên Python 3.10 Linux, `bash scripts/install_cpu.sh` cài theo dependency snapshot
-`requirements-lock.txt` đã dùng để kiểm chứng. Các Python khác có thể cần resolve dependencies lại.
-Nếu `venv` chưa có: cài gói `python3-venv` bằng package manager của hệ điều hành.
-
-## Kiểm tra nhanh toàn bộ pipeline
-
-Mỗi thư mục output phải mới để tránh ghi đè dữ liệu thí nghiệm.
+**A. Đánh giá MuJoCo** (Python 3.10, Torch CPU là cố ý):
 
 ```bash
-g1lab benchmark --steps 1000
-g1lab train --run runs/smoke --steps 1024 --rollout 128 --checkpoint-every 512
-g1lab eval --bundle runs/smoke/final --output artifacts/smoke-eval --episodes 2 --seconds 2
-g1lab report artifacts/smoke-eval --output artifacts/smoke-report
+python3.10 -m venv .venv-eval
+.venv-eval/bin/python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+.venv-eval/bin/python -m pip install -e '.[dev,lab]' -c requirements-lock.txt
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv-eval/bin/python -m pytest -q
 ```
 
-Smoke training chỉ xác nhận hệ thống chạy, không chứng minh robot đã học đi.
+**B. Train Isaac** (Python 3.11): Isaac Sim 5.1.0 (pip), Torch 2.7.0+cu128, Isaac Lab v2.3.2 (source),
+RSL-RL 3.1.2, `vendor/unitree_rl_lab` (editable), project cài `--no-deps`. Luôn cài với
+[file constraints](docs/experiment-data/5090-bringup/isaac51-constraints.txt): `isaaclab.sh --install` dùng
+`uv` và có thể tự nâng Torch lên bản CUDA 13. Từng bước và lý do: [docs/RTX_5090_BRINGUP.md](docs/RTX_5090_BRINGUP.md).
 
-## Huấn luyện trên máy 1660 Ti
+Asset USD G1 29 khớp lấy từ [unitreerobotics/unitree_model](https://huggingface.co/datasets/unitreerobotics/unitree_model),
+giữ nguyên cấu trúc thư mục; đường dẫn truyền qua `--usd`.
+
+### Chỉ dùng một GPU
+
+[src/g1lab/gpu.py](src/g1lab/gpu.py) ghim CUDA theo **UUID** của GPU dành cho dự án, đặt
+`CUDA_DEVICE_ORDER=PCI_BUS_ID`, và **từ chối** mọi `CUDA_VISIBLE_DEVICES` khác. Render MuJoCo/EGL cũng ghim
+theo địa chỉ PCI. Kit chạy với multi-GPU tắt. UUID, PCI và `activeGpu` hiện đặt cho máy phát triển; trên máy
+khác, đặt `G1LAB_GPU_UUID`/`G1LAB_GPU_PCI` và kiểm tra lại `KIT_ARGS`. Đừng tự đặt `CUDA_VISIBLE_DEVICES`.
+
+## Chạy
+
+Mỗi thư mục output phải mới. `python` là interpreter Isaac; `$USD` là đường dẫn
+`.../G1/29dof/usd/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd`.
 
 ```bash
-# Baseline, một môi trường và hai CPU threads để bắt đầu
-g1lab train --config configs/flat.json --run runs/flat-42 --steps 1000000 --seed 42
+# Tái hiện baseline (MuJoCo)
+.venv-eval/bin/python scripts/tune_lab_controller.py --output artifacts/baseline-check
+.venv-eval/bin/python scripts/benchmark_lab_policy.py --heading-hold --output artifacts/heading-check
 
-# Nhiều tiến trình physics nếu CPU/RAM cho phép; đo tốc độ trước khi tăng
-g1lab train --config configs/flat.json --run runs/flat-workers --steps 1000000 --envs 2 --workers
+# Preflight và smoke Isaac
+python scripts/check_training_host.py --usd "$USD" --output artifacts/host.json --require-training
+python scripts/prepare_lab_fast.py --usd "$USD" --cap 1 --envs 32 --iterations 2 --output artifacts/smoke --execute
 
-# Fine-tune chống nhiễu, giữ đúng policy và observation statistics
-g1lab train --config configs/robust.json --run runs/robust-42 --steps 1000000 --resume runs/flat-42/final
+# Checkpoint khởi tạo từ actor ONNX (template = checkpoint bất kỳ cùng kiến trúc, ví dụ từ smoke)
+python scripts/onnx_to_rslrl.py --std 0.1 --seed 0 \
+  --onnx vendor/unitree_rl_lab/deploy/robots/g1_29dof/config/policy/velocity/v0/exported/policy.onnx \
+  --template <smoke_run>/model_0.pt --output checkpoints/onnx-v0-std0.1/model_0.pt
 
-# Curriculum theo ngân sách: phẳng → chống nhiễu → dốc 2/4 độ → rough 1.2/2.4 cm
-g1lab curriculum --run runs/curriculum-42 --steps-per-stage 1000000
+# Một lượt train task Sprint
+python scripts/prepare_lab_fast.py --profile sprint --usd "$USD" --envs 4096 --iterations 600 \
+  --checkpoint checkpoints/onnx-v0-std0.1/model_0.pt --critic-warmup 20 --output artifacts/sprint-01 --execute
 
-tensorboard --logdir runs
+# Đánh giá: thang tốc độ Isaac, export, thang tốc độ MuJoCo kèm số đo pha bay
+python scripts/isaac_sprint_eval.py --policy <run>/model_N.pt --usd "$USD" --speeds 1,2,3,4,5 --output <json>
+python scripts/export_rslrl_onnx.py --checkpoint <run>/model_N.pt --output artifacts/policies/<name>
+.venv-eval/bin/python scripts/mujoco_sprint_eval.py --policy-dir artifacts/policies/<name> --speeds 1,1.5,2 --output <json>
 ```
 
-Ngân sách trên là ví dụ, không bảo đảm hội tụ. PPO làm tròn theo kích thước rollout.
-Curriculum chuyển stage theo ngân sách bước, chưa tự đánh giá để quyết định chuyển cấp.
-Fine-tune tuần tự có thể quên kỹ năng cũ; phải chạy full suite sau mỗi stage.
-Resume tạo run mới, không khôi phục chính xác trạng thái RNG/rollout vật lý giữa chừng.
-Các stage dùng cùng observation/action space và giữ chuẩn hóa; optimizer được tải từ checkpoint.
-Ctrl+C lưu bundle `final/`; checkpoint định kỳ nằm trong `checkpoints/step-N/`.
-Chỉ bundle có marker `COMPLETE` mới được tải. Không tráo file statistics giữa các policy.
-
-## Đánh giá và so sánh
+### Autopilot (train không người trông, không cần mạng)
 
 ```bash
-# PD tham chiếu, không có policy học
-g1lab eval --output artifacts/pd --suite full --episodes 10
+setsid nohup .venv-eval/bin/python scripts/autopilot_sprint.py --output artifacts/autopilot-<tên> \
+  --init-checkpoint checkpoints/onnx-v0-std0.1/model_0.pt --usd "$USD" --hours 0 \
+  --envs 4096 --round-iterations 600 --speed-limit 11.0 > artifacts/autopilot-<tên>.out 2>&1 &
 
-# Seed đánh giá mặc định bắt đầu từ 10000, tách seed train
-g1lab eval --bundle runs/flat-42/final --output artifacts/flat-42 --suite full --episodes 10
-g1lab eval --bundle runs/robust-42/final --output artifacts/robust-42 --suite full --episodes 10
-g1lab report artifacts/flat-42 artifacts/robust-42 --output artifacts/comparison
+cat artifacts/autopilot-<tên>/REPORT.md                                # tiến độ, bản tốt nhất, kiểm chứng
+echo '{"stop": true}' > artifacts/autopilot-<tên>/control.json        # dừng êm sau vòng hiện tại
 ```
 
-Full suite: đứng, tiến, ngang, quay, đổi lệnh, ma sát, mass scale, dốc, rough, cầu thang,
-và lực đẩy 2/5/10 N·s theo hai hướng. Không có policy cầu thang được bảo đảm sẵn.
-Output: `protocol.json`, `episodes.csv`, `summary.json`, trajectory CSV từng episode,
-và video nếu thêm `--video`. Report xuất PNG và Markdown.
-Xem [giao thức đo lường](docs/EVALUATION.md) trước khi kết luận chất lượng.
+`--hours 0` nghĩa là chạy đến khi có lệnh dừng. Mỗi vòng: train 600 iteration → đánh giá Isaac → export →
+MuJoCo chạy nền. Quy tắc tự xử lý:
+- Lưu bản tốt nhất theo tốc độ giữ được trong Isaac.
+- Tụt hơn 1 m/s so với bản tốt nhất, hoặc NaN, hoặc train lỗi → quay về bản tốt nhất và giảm LR một nửa.
+- Chững 3 vòng → bật nút chỉnh kế tiếp.
+- Nếu curriculum không tự tăng mà policy đã giữ được tốc độ gần đỉnh dải → tự nâng thêm 0,5 m/s.
 
-## Demo trực tiếp
+Mỗi bản tốt nhất mới được kiểm chứng MuJoCo 10 seed mới, giữ 60 s. Mọi tiến trình con chạy trong
+`unshare -rn` (không mạng). Một luồng canh sẽ dừng toàn bộ nếu tiến trình của dự án xuất hiện trên GPU khác.
+Tự dừng khi ổ đĩa còn dưới 50 GB. Chi tiết: [docs/AUTOPILOT.md](docs/AUTOPILOT.md).
 
-```bash
-g1lab demo                                      # PD diagnostic, chưa học đi
-g1lab demo --bundle runs/flat-42/final
-g1lab demo --bundle runs/flat-42/final --terrain slope --difficulty 0.3
-```
+## Tiêu chí đánh giá
 
-Cửa sổ MuJoCo: W/S thay vận tốc tiến, A/D vận tốc ngang, Q/E tốc độ quay,
-X dừng, P đẩy ngang 5 N·s, R reset. Lệnh và trạng thái hiển thị trong terminal.
-Đóng cửa sổ để thoát. GUI cần desktop/display hoạt động; không dùng được trong terminal headless.
-
-Video headless cần backend OpenGL hợp lệ. Thử `MUJOCO_GL=egl` nếu EGL hoạt động;
-hoặc `MUJOCO_GL=osmesa` nếu hệ thống có libOSMesa. Cài CPU torch không sửa NVIDIA driver.
-Trong sandbox có thể không truy cập được NVIDIA dù driver trên máy vẫn hoạt động;
-chạy `nvidia-smi` trực tiếp trên máy để phân biệt. ROS có thể tự nạp pytest plugin ngoài
-venv; `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` cô lập các bài kiểm thử của repo.
-
-## Địa hình
-
-| Loại | Tham số difficulty ∈ [0,1] |
+| Simulator | Đạt |
 |---|---|
-| Flat | Mặt phẳng, có thể đổi ma sát |
-| Slope | Dốc theo hướng +X, góc = 10 × difficulty độ |
-| Rough | Heightfield nhiễu trơn theo seed, biên độ tối đa 6 × difficulty cm |
-| Stairs | 6 bậc, mỗi bậc cao 10 × difficulty cm, mặt bậc sâu 40 cm |
+| Isaac (thang tốc độ) | Xuất phát từ đứng yên, tăng tốc 2 m/s², giữ 10 s: ≥ 90% robot sống và vx trung bình ≥ 85% lệnh |
+| MuJoCo (chấm cuối) | Đứng → tăng tốc → giữ 60 s → giảm tốc → dừng: không ngã, vx ≥ 85% lệnh, RMSE phẳng ≤ max(0,15; 20% lệnh), RMS quay < 0,25 rad/s, lệch hướng < 30°, tốc độ cuối < 0,15 m/s |
 
-Terrain scan 15 điểm được đưa vào observation ở mọi địa hình để giữ cùng kiến trúc policy.
-Scan là dữ liệu hình học chính xác từ simulator, chưa mô phỏng camera hoặc nhiễu cảm biến.
+Số đo kỹ thuật chạy được báo cáo kèm (MuJoCo 500 Hz, ngưỡng 20 N, khử nhiễu 40 ms): tỷ lệ pha bay, hai chân
+cùng chạm, thời gian chạm/vung, cadence, tỷ lệ tiếp đất mũi/gót, lực ngang đỉnh, độ nâng gối, độ gập cổ chân,
+biên độ và tương quan tay–chân, góc ngả thân. Ngưỡng bắt buộc cho pha bay chưa được chốt.
 
 ## Cấu trúc
 
 ```text
-src/g1lab/env.py          Physics, observations, reward, pushes, randomization
-src/g1lab/terrain.py      Terrain generation
-src/g1lab/training.py     PPO, checkpoint, resume
-src/g1lab/curriculum.py   Staged curriculum
-src/g1lab/evaluation.py   Evaluation protocol and trajectory exports
-src/g1lab/demo.py         Interactive viewer
-src/g1lab/report.py       Comparison figures
-configs/                 Training scenarios
-tests/                   Physics/API/reproducibility/checkpoint regression tests
-legacy/                  Original generic Humanoid-v5 prototype
+src/g1lab/isaac_sprint.py     Task Sprint: lệnh tốc độ giới hạn gia tốc, theo dõi pha bước, reward, terrain offline
+src/g1lab/isaac_v0_cfg.py     Task velocity với gain PD của ONNX v0
+src/g1lab/isaac_tasks.py      Đăng ký task (entry point dạng chuỗi, không cần Isaac khi import)
+src/g1lab/gpu.py              Ghim GPU (CUDA theo UUID, EGL theo PCI, tham số Kit)
+src/g1lab/fast_plan.py        Lệnh train Isaac (speed-stage, sprint)
+src/g1lab/gait_metrics.py     Số đo kỹ thuật chạy (thuần numpy)
+src/g1lab/lab_policy.py       Chạy policy ONNX 29 khớp trong MuJoCo (+ telemetry chỉ đọc)
+src/g1lab/lab_evaluation.py   Kịch bản đứng/tăng tốc/giữ/giảm tốc/dừng và tiêu chí đạt
+scripts/autopilot_sprint.py   Vòng lặp train/đánh giá/tự xử lý không người trông
+scripts/isaac_train.py        Wrapper train.py của vendor: đăng ký task, warm-up critic
+scripts/prepare_lab_fast.py   Launcher train Isaac + provenance
+scripts/onnx_to_rslrl.py      ONNX → checkpoint RSL-RL
+scripts/export_rslrl_onnx.py  Checkpoint → policy.onnx + deploy.yaml
+scripts/isaac_sprint_eval.py  Thang tốc độ trong Isaac
+scripts/mujoco_sprint_eval.py Thang tốc độ trong MuJoCo kèm số đo pha bay
+scripts/isaac_sprint_probe.py Kiểm tra dấu/độ lớn các term reward
+vendor/                       unitree_rl_lab, unitree_mujoco (revision ghim)
+docs/experiment-data/         Số liệu nhỏ đi kèm các báo cáo
+legacy/, src/g1lab/env.py ... Pipeline MuJoCo/SB3 thời 1660 (xem bên dưới)
 ```
 
-## Chuyển sang RTX 5090
+## Lịch sử: pipeline MuJoCo/SB3 trên GTX 1660 Ti
 
-Mã này chạy được trên máy mạnh hơn nhưng physics vẫn CPU. Có thể tăng worker theo CPU/RAM;
-GPU không bảo đảm nhanh hơn cho PPO MLP nhỏ. Muốn mô phỏng GPU hàng loạt cần port task sang
-mjlab/MuJoCo Warp, đối chiếu observation, reward, timestep và actuator. Checkpoint SB3 không tự
-chuyển thành checkpoint của trainer khác. AMP và backend GPU là hướng mở rộng, chưa triển khai.
+Trước RTX 5090, dự án chạy trên máy GTX 1660 Ti 6 GB với môi trường MuJoCo CPU riêng và PPO
+Stable-Baselines3 (CLI `g1lab`: train/eval/curriculum/report/demo, địa hình phẳng/dốc/gồ ghề/cầu thang).
+Pipeline này vẫn còn trong repo và test vẫn chạy, nhưng không còn là hướng chính. Checkpoint SB3 dùng
+teacher chân 12 khớp, không resume được bằng RSL-RL.
 
-## Trạng thái kiểm chứng
+- [Báo cáo dọn mã và 46 lượt thử bộ giữ hướng](docs/CLEANUP_1660_REPORT.md)
+- [Tích hợp Unitree RL Lab 29 khớp](docs/UNITREE_RL_LAB.md) · [Đo tốc độ policy Unitree gốc](docs/UNITREE_SPEED.md)
+- [Thực nghiệm 1660](docs/EXPERIMENT_1660.md) · [trộn địa hình](docs/EXPERIMENT_MIXED_1660.md) ·
+  [giữ kỹ năng bằng replay](docs/EXPERIMENT_PRESERVATION_1660.md) · [chạy tiếp tại máy](docs/LOCAL_TRAINING.md)
+- [Giao thức đánh giá](docs/EVALUATION.md) · [Demo 16 môi trường](docs/SWARM_DEMO.md)
+- [Pilot tự đứng dậy](docs/RECOVERY.md) — tạm dừng, không nằm trong phạm vi hiện tại
 
-Xem [VALIDATION.md](docs/VALIDATION.md). Không có kết quả nào trong repo được trình bày là
-policy đã hội tụ nếu chỉ mới chạy smoke test. Dự án không có mã điều khiển robot thật.
+## Tài liệu
+
+- [Bring-up RTX 5090](docs/RTX_5090_BRINGUP.md): môi trường, số đo quy mô env, gain v0, khởi tạo
+- [Task Sprint](docs/SPRINT_TASK.md) · [Autopilot](docs/AUTOPILOT.md)
+- [Đánh giá SPRINT (arXiv 2605.28549) và kế hoạch tích hợp](docs/SPRINT_INTEGRATION.md): chưa có code/data công khai
+- [Bàn giao 5090](docs/CLAUDE_5090_START_HERE.md) · [Trạng thái kiểm chứng](docs/VALIDATION.md)
+- Provenance và giấy phép: [THIRD_PARTY.md](THIRD_PARTY.md)
+
+Dự án chỉ chạy trong mô phỏng; không có mã điều khiển robot thật. Smoke test hoặc lượt train thành công
+không có nghĩa là policy đã học chạy. Chỉ benchmark MuJoCo trên seed mới mới được dùng để kết luận.
