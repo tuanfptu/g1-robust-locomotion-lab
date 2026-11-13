@@ -1,0 +1,62 @@
+{
+  "feet_sensor_bodies": [
+    "left_ankle_roll_link",
+    "right_ankle_roll_link"
+  ],
+  "median_air_time_s": 0.21999996900558472,
+  "median_stance_s": 0.30000001192092896,
+  "policy": "vendor/unitree_rl_lab/deploy/robots/g1_29dof/config/policy/velocity/v0/exported/policy.onnx",
+  "speed_target": 1.5,
+  "survival": 1.0,
+  "standing": {
+    "knee_drop_m": 0.4376143515110016,
+    "toe_minus_heel_m": -9.033828973770142e-08,
+    "torso_pitch_deg": 5.5846812756499276e-06,
+    "default_ankle_pitch": [
+      -0.20000000298023224,
+      -0.20000000298023224
+    ]
+  },
+  "flight_fraction": 0.0,
+  "double_support_fraction": 0.2959375,
+  "mean_forward_push_bodyweights": 0.057131581164879514,
+  "mean_torso_pitch_deg": 3.2086492466926573,
+  "mean_knee_drop_in_swing_m": 0.42432668231916,
+  "toe_minus_heel_at_touchdown_m": -0.0031181405999462356,
+  "touchdowns": 728,
+  "mean_air_time_s": 0.22532963822339916,
+  "mean_stance_s": 0.30531251477077603,
+  "reward_term_mean_per_step": {
+    "track_lin_vel_xy": 1.4335598945617676,
+    "track_ang_vel_z": 0.7760195732116699,
+    "alive": 0.25000128149986267,
+    "base_linear_velocity": -0.08366842567920685,
+    "base_angular_velocity": -0.010885363444685936,
+    "joint_vel": -0.0883350670337677,
+    "joint_acc": -0.03649710863828659,
+    "action_rate": -0.08680266886949539,
+    "dof_pos_limits": 0.0,
+    "energy": -0.006758800707757473,
+    "joint_deviation_arms": -0.07372104376554489,
+    "joint_deviation_waists": -0.041567858308553696,
+    "joint_deviation_legs": -0.06059342250227928,
+    "flat_orientation_l2": -0.018407445400953293,
+    "base_height": -0.013137958943843842,
+    "gait": 0.86328125,
+    "feet_slide": -0.07193920016288757,
+    "feet_clearance": 1.6294820308685303,
+    "undesired_contacts": 0.0,
+    "flight_phase": 0.0,
+    "double_support": 0.0,
+    "stance_too_long": 0.0,
+    "swing_air_time": 0.0,
+    "push_off_force": 0.0,
+    "forefoot_touchdown": 0.0,
+    "knee_lift": 0.0,
+    "swing_dorsiflexion": 0.0,
+    "arm_leg_counter_swing": 0.0,
+    "staged_lean": 0.0,
+    "torso_roll": 0.0,
+    "run_joint_deviation_arms": 0.0
+  }
+}

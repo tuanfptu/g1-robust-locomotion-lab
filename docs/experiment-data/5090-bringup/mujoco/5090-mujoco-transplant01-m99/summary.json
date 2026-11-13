@@ -1,0 +1,76 @@
+{
+  "highest_tested_validated_command_mps": 1.25,
+  "validation": [
+    {
+      "command_mps": 1.25,
+      "seed": 91000,
+      "hold_s": 60,
+      "duration_s": 73.0,
+      "survived": true,
+      "passed": true,
+      "steady_vx_mps": 1.1919493843118258,
+      "planar_rmse_mps": 0.09060971957965962,
+      "stop_speed_mps": 0.0011640412481178208,
+      "yaw_rate_rmse_rad_s": 0.11599542998814877,
+      "max_abs_heading_rad": 0.03958838009581248,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.25,
+      "seed": 91001,
+      "hold_s": 60,
+      "duration_s": 73.0,
+      "survived": true,
+      "passed": true,
+      "steady_vx_mps": 1.1919166051858368,
+      "planar_rmse_mps": 0.09056267280658722,
+      "stop_speed_mps": 0.0010208188181460274,
+      "yaw_rate_rmse_rad_s": 0.11585010643515715,
+      "max_abs_heading_rad": 0.06193487041690798,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.25,
+      "seed": 91002,
+      "hold_s": 60,
+      "duration_s": 73.0,
+      "survived": true,
+      "passed": true,
+      "steady_vx_mps": 1.1920116957827596,
+      "planar_rmse_mps": 0.09044977573991503,
+      "stop_speed_mps": 0.0010609794032408145,
+      "yaw_rate_rmse_rad_s": 0.11589161765047337,
+      "max_abs_heading_rad": 0.039588367805817655,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.25,
+      "seed": 91003,
+      "hold_s": 60,
+      "duration_s": 73.0,
+      "survived": true,
+      "passed": true,
+      "steady_vx_mps": 1.19189344930824,
+      "planar_rmse_mps": 0.09052782241932085,
+      "stop_speed_mps": 0.0010190214398994278,
+      "yaw_rate_rmse_rad_s": 0.1158885767606469,
+      "max_abs_heading_rad": 0.044588412772553127,
+      "stage": "validation"
+    },
+    {
+      "command_mps": 1.25,
+      "seed": 91004,
+      "hold_s": 60,
+      "duration_s": 73.0,
+      "survived": true,
+      "passed": true,
+      "steady_vx_mps": 1.191896084481655,
+      "planar_rmse_mps": 0.09054035545924206,
+      "stop_speed_mps": 0.0010208228138218847,
+      "yaw_rate_rmse_rad_s": 0.11584354580835414,
+      "max_abs_heading_rad": 0.05419288847140144,
+      "stage": "validation"
+    }
+  ],
+  "note": "No new RL training. Finite command/seed audit of an exported baseline, not a global maximum."
+}

@@ -87,6 +87,14 @@ class LabReference:
         ]
         if min(self.foot_ids) < 0:
             raise ValueError("Missing foot bodies in MuJoCo model")
+        self.joint_index = {name: i for i, name in enumerate(ordered_names)}
+        self.knee_ids = [
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, f"{s}_knee_link")
+            for s in ("left", "right")
+        ]
+        self.torso = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "torso_link")
+        self.body_weight = float(self.model.body_mass.sum() * 9.81)
+        self.gait_log = []
         self.qadr = self.model.jnt_qposadr[joint_ids]
         self.vadr = self.model.jnt_dofadr[joint_ids]
         self.kp = np.array(self.config["stiffness"])[mapping]
@@ -130,6 +138,41 @@ class LabReference:
         self.command[:] = 0
         mujoco.mj_forward(self.model, self.data)
         self.history.reset(self.values())
+        self.gait_log = []
+
+    def _gait_sample(self):
+        """(time, contact L, R, toe L, R, heel L, R, forward ground force N, normal force L, R); read-only.
+
+        A foot is in contact when its summed normal force exceeds 20 N (same threshold as the Isaac sprint
+        sensor); toe/heel flags mark which contact spheres carry load (> 1 N).
+        """
+        normal, toe, heel = [0.0, 0.0], [False, False], [False, False]
+        rotation = self.data.xmat[self.pelvis].reshape(3, 3)
+        heading = np.array([rotation[0, 0], rotation[1, 0], 0.0])
+        heading /= max(np.linalg.norm(heading), 1e-9)
+        forward = 0.0
+        wrench = np.zeros(6)
+        for i in range(self.data.ncon):
+            c = self.data.contact[i]
+            b1, b2 = self.model.geom_bodyid[c.geom1], self.model.geom_bodyid[c.geom2]
+            if 0 not in (b1, b2):
+                continue
+            foot_body, foot_geom, sign = (b2, c.geom2, 1.0) if b1 == 0 else (b1, c.geom1, -1.0)
+            if foot_body not in self.foot_ids:
+                continue
+            mujoco.mj_contactForce(self.model, self.data, i, wrench)
+            if wrench[0] <= 1.0:
+                continue
+            f = self.foot_ids.index(foot_body)
+            normal[f] += float(wrench[0])
+            if self.model.geom_pos[foot_geom][0] > 0.03:
+                toe[f] = True
+            else:
+                heel[f] = True
+            world = c.frame.reshape(3, 3).T @ wrench[:3]
+            forward += sign * float(world @ heading)
+        contact = [n > 20.0 for n in normal]
+        return (float(self.data.time), *contact, *toe, *heel, forward, *normal)
 
     def step(self, command, diagnostics=False):
         self.command[:] = command
@@ -150,6 +193,7 @@ class LabReference:
                 clipped += np.count_nonzero((requested < limits[:, 0]) | (requested > limits[:, 1]))
             mujoco.mj_step(self.model, self.data)
             if diagnostics:
+                self.gait_log.append(self._gait_sample())
                 peak_utilization = max(
                     peak_utilization,
                     float(
@@ -184,6 +228,21 @@ class LabReference:
             for foot in touching:
                 mujoco.mj_objectVelocity(self.model, self.data, mujoco.mjtObj.mjOBJ_BODY, foot, velocity, 0)
                 speeds.append(np.linalg.norm(velocity[3:5]))
+            last = self.gait_log[-1]
+            torso = self.data.xmat[self.torso].reshape(3, 3)
+            pelvis_z = self.data.xpos[self.pelvis][2]
+            for i, side in enumerate(("l", "r")):
+                name = "left" if side == "l" else "right"
+                result[f"contact_{side}"] = bool(last[1 + i])
+                result[f"knee_drop_{side}_m"] = float(pelvis_z - self.data.xpos[self.knee_ids[i]][2])
+                k = self.joint_index[f"{name}_ankle_pitch_joint"]
+                result[f"ankle_pitch_rel_{side}_rad"] = float(self.data.qpos[self.qadr[k]] - self.nominal[k])
+                for joint in ("shoulder_pitch", "hip_pitch"):
+                    j = self.joint_index[f"{name}_{joint}_joint"]
+                    result[f"{joint}_{side}_rad"] = float(self.data.qpos[self.qadr[j]])
+            result["torso_pitch_deg"] = float(
+                np.degrees(np.arcsin(np.clip((torso.T @ [0, 0, -1])[0], -1, 1)))
+            )
             result.update(
                 {
                     "requested_torque_clipped_fraction": clipped / (10 * 29),

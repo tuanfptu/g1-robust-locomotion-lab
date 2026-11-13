@@ -5,11 +5,15 @@ import json
 import time
 from pathlib import Path
 
-import mujoco
-from OpenGL import GL
+from g1lab.gpu import pin_egl
 
-from g1lab.lab_evaluation import trial, write_csv
-from g1lab.lab_policy import LabReference
+pin_egl()  # must precede mujoco import; refuses any GPU other than the project GPU
+
+import mujoco  # noqa: E402
+from OpenGL import GL  # noqa: E402
+
+from g1lab.lab_evaluation import trial, write_csv  # noqa: E402
+from g1lab.lab_policy import LabReference  # noqa: E402
 
 
 def main(args):

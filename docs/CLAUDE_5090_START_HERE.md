@@ -5,6 +5,9 @@ Bạn đang tiếp quản dự án `g1-robust-locomotion-lab` của tuanfptu. L�
 bằng, giảm tốc và dừng được, hoàn toàn mô phỏng. Mục tiêu 11 m/s là hướng nghiên cứu dài hạn,
 chưa chứng minh khả thi với mô hình/giới hạn actuator này; không hứa thời gian hội tụ.
 
+> **Cập nhật 13/11/2026:** bring-up trên RTX 5090 đã xong; đọc [RTX_5090_BRINGUP.md](RTX_5090_BRINGUP.md)
+> (môi trường, số đo, task gain v0, khởi tạo ghép actor ONNX) và [SPRINT_INTEGRATION.md](SPRINT_INTEGRATION.md).
+
 ## 1. Xác minh gói và phục hồi Git
 
 Gói chứa source, vendor public ghim revision, kết quả gần nhất, video và hai bundle SB3 cũ.

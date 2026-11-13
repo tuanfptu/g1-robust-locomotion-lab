@@ -1,0 +1,46 @@
+{
+  "lab_revision": "4960b84732b0c2ec593dccbfe963fda1bcd7b1e3",
+  "mujoco_revision": "1eb6642e3f3fdfb7fb13a9794fd6a2dd93ea0e7d",
+  "policy_sha256": "610c27e463a8f666aa50a06346678c00b4df3859f10b54bcc1f817c28251406f",
+  "weights_updated": false,
+  "development": {
+    "speeds": [
+      1.5,
+      1.6,
+      1.65
+    ],
+    "gains": [
+      1.0,
+      2.0,
+      4.0
+    ],
+    "ramps": [
+      3.0,
+      5.0
+    ],
+    "seeds": [
+      94000,
+      94001
+    ],
+    "hold_s": 30
+  },
+  "validation": {
+    "seeds": [
+      95000,
+      95001,
+      95002,
+      95003,
+      95004,
+      95005,
+      95006,
+      95007,
+      95008,
+      95009
+    ],
+    "hold_s": 60
+  },
+  "selection": "all development seeds pass; highest command, then lowest mean yaw RMS",
+  "fallback": "if selected candidate fails held-out, validate original gain=2/ramp=3 at 1.5 m/s on separate seeds 96000..96009",
+  "gate": "same as g1lab.lab_evaluation.trial; unchanged thresholds",
+  "diagnostics": "torque clipping across all 10 substeps; foot-body origin XY speed sampled at 50 Hz during ground contact is a slip proxy, not contact-point slip"
+}

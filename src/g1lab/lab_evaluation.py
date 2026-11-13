@@ -15,6 +15,30 @@ def write_csv(path, rows):
         writer.writerows(rows)
 
 
+def sprint_gait(env, rows, start, stop, ramp):
+    """Flight/contact/technique metrics over the steady window [start, stop) s (see g1lab.gait_metrics)."""
+    from g1lab.gait_metrics import contact_metrics, swing_kinematics
+
+    log = np.array([g for g in env.gait_log if start <= g[0] < stop])
+    steps = [r for r in rows if start <= r["time_s"] < stop]
+    if len(log) < 10 or len(steps) < 10:
+        return {}
+    dt = float(env.model.opt.timestep)
+    metrics = contact_metrics(log[:, 1:3], log[:, 3:5], log[:, 5:7], log[:, 7], dt, env.body_weight)
+
+    contact = np.array([[r["contact_l"], r["contact_r"]] for r in steps])
+    knee = np.array([[r["knee_drop_l_m"], r["knee_drop_r_m"]] for r in steps])
+    ankle = np.array([[r["ankle_pitch_rel_l_rad"], r["ankle_pitch_rel_r_rad"]] for r in steps])
+    shoulder = np.array([[r["shoulder_pitch_l_rad"], r["shoulder_pitch_r_rad"]] for r in steps])
+    hip = np.array([[r["hip_pitch_l_rad"], r["hip_pitch_r_rad"]] for r in steps])
+    metrics.update(
+        swing_kinematics(contact, knee, ankle, shoulder, hip, [r["torso_pitch_deg"] for r in steps])
+    )
+    accel = [r["torso_pitch_deg"] for r in rows if 2.0 <= r["time_s"] < 2.0 + ramp]
+    metrics["mean_torso_pitch_accel_phase_deg"] = float(np.mean(accel)) if accel else None
+    return {f"gait_{k}": v for k, v in metrics.items()}
+
+
 def trial(
     env,
     speed,
@@ -30,6 +54,10 @@ def trial(
         raise ValueError("Require positive speed/ramp, hold >5 s and nonnegative heading gain")
     env.reset(seed)
     rows = []
+    if video:
+        from g1lab.gpu import pin_egl
+
+        pin_egl()  # refuses rendering anywhere but the project GPU
     renderer = mujoco.Renderer(env.model, height=480, width=640) if video else None
     writer = imageio.get_writer(video, fps=50) if video else None
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 17) if video else None
@@ -116,6 +144,7 @@ def trial(
         "max_abs_heading_rad": heading,
     }
     if diagnostics:
+        result.update(sprint_gait(env, rows, hold_start + 5, hold_start + hold, ramp))
         result.update(
             {
                 "max_tilt_deg": float(
