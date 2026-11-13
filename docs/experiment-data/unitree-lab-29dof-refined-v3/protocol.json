@@ -1,0 +1,26 @@
+{
+  "method": "public full-body ONNX plus yaw=clip(-2*heading,-.2,.2), no RL training",
+  "development_commands": [
+    1.6,
+    1.65,
+    1.7
+  ],
+  "development_seeds": [
+    92000,
+    92001,
+    92002
+  ],
+  "validation_seeds": [
+    93000,
+    93001,
+    93002,
+    93003,
+    93004
+  ],
+  "hold_seconds": [
+    30,
+    60
+  ],
+  "gate": "same as benchmark_lab_policy.py",
+  "fallback": "unitree-lab-29dof-heading-v2 qualified point"
+}

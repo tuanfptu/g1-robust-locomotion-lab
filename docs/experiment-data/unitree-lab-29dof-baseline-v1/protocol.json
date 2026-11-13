@@ -1,0 +1,15 @@
+{
+  "args": {
+    "source": "vendor/unitree_rl_lab",
+    "mujoco_source": "vendor/unitree_mujoco",
+    "output": "artifacts/unitree-lab-29dof-baseline-v1",
+    "video": true
+  },
+  "lab_commit": "4960b84732b0c2ec593dccbfe963fda1bcd7b1e3",
+  "mujoco_commit": "1eb6642e3f3fdfb7fb13a9794fd6a2dd93ea0e7d",
+  "policy_sha256": "610c27e463a8f666aa50a06346678c00b4df3859f10b54bcc1f817c28251406f",
+  "policy_contract": "29 actions, 480 observations, term-major history length 5; deployment PD gains",
+  "schedule": "stand 2 s, ramp 3 s, hold, ramp down 3 s, stop 5 s; steady metrics after 10 s",
+  "gate": "full survival, vx >=85% command, planar RMSE <=max(0.15,20% command), stop speed <0.15 m/s, yaw RMSE <0.25 rad/s, heading <30 degrees",
+  "purpose": "Public baseline only; no training; no stage promotion based on target speed alone"
+}

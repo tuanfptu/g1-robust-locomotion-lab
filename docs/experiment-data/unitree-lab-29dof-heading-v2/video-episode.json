@@ -1,0 +1,13 @@
+{
+  "command_mps": 1.5,
+  "seed": 91000,
+  "hold_s": 30,
+  "duration_s": 43.0,
+  "survived": true,
+  "passed": true,
+  "steady_vx_mps": 1.3922792403778341,
+  "planar_rmse_mps": 0.12771127666498408,
+  "stop_speed_mps": 0.001236593936245517,
+  "yaw_rate_rmse_rad_s": 0.17125568559188295,
+  "max_abs_heading_rad": 0.06433804301443448
+}

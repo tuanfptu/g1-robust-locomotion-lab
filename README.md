@@ -4,6 +4,10 @@
 
 Unitree G1 29 khớp • MuJoCo CPU • PPO / Stable-Baselines3 • Python 3.10+
 
+Mới nhất: [tích hợp Unitree RL Lab, điều khiển toàn thân 29 khớp](docs/UNITREE_RL_LAB.md).
+Policy ONNX công khai + vòng giữ hướng đạt **1,394 m/s thực tế**, qua 5/5 lượt giữ 60 giây
+rồi dừng trên mặt phẳng. Đây là inference và cải tiến điều khiển; chưa huấn luyện PPO mới.
+
 [Đo tốc độ policy Unitree gốc](docs/UNITREE_SPEED.md): lệnh 1,6 m/s qua 5/5 lượt giữ 60 giây,
 tốc độ tiến thực tế trung bình khoảng 1,33 m/s trên mô hình gốc 12 khớp chân, thân trên cố định.
 Đây là benchmark riêng, không phải kết quả của policy student trên mô hình 29 khớp.

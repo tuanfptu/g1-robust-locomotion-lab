@@ -24,3 +24,19 @@ the observation scaling, 0.8 s phase, PD gains and default leg pose from the acc
 The upstream policy and model files are not redistributed in this repository.
 Student checkpoints in the local experiments are initialized through imitation of this teacher;
 their success is not evidence of learning locomotion from scratch.
+
+## Optional Unitree RL Lab baseline and integration
+
+The optional `scripts/fetch_lab.sh` fetches the following into ignored `vendor/`:
+
+- `unitreerobotics/unitree_rl_lab` at `4960b84732b0c2ec593dccbfe963fda1bcd7b1e3` (Apache-2.0):
+  https://github.com/unitreerobotics/unitree_rl_lab
+- `unitreerobotics/unitree_mujoco` at `1eb6642e3f3fdfb7fb13a9794fd6a2dd93ea0e7d` (BSD-3-Clause):
+  https://github.com/unitreerobotics/unitree_mujoco
+
+The 29-joint ONNX velocity policy, deployment metadata, SDK joint ordering, observations and
+PD controller configuration belong to Unitree. `g1lab.lab_policy` independently implements
+that deployment contract in Python. No policy weights or upstream robot assets from these
+repositories are redistributed here. This is distinct from the older 12-leg-joint RL Gym teacher.
+Our command generator prepares experimental training overrides; it does not replace upstream
+Isaac Lab, RSL-RL or claim a new RL algorithm.
