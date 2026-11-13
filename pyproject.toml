@@ -15,7 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.9,<1"]
-lab = ["onnxruntime==1.22.0", "PyYAML==6.0.3"]
+lab = ["onnxruntime==1.22.0", "PyYAML==6.0.3", "PyOpenGL>=3.1.7,<4"]
 
 [project.scripts]
 g1lab = "g1lab.cli:main"

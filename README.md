@@ -4,6 +4,9 @@
 
 Unitree G1 29 khớp • MuJoCo CPU • PPO / Stable-Baselines3 • Python 3.10+
 
+[Báo cáo dọn mã và 46 lượt thử trên 1660 Ti](docs/CLEANUP_1660_REPORT.md) ·
+[Chuẩn bị chuyển RTX 5090](docs/RTX_5090_HANDOFF.md).
+
 Mới nhất: [tích hợp Unitree RL Lab, điều khiển toàn thân 29 khớp](docs/UNITREE_RL_LAB.md).
 Policy ONNX công khai + vòng giữ hướng đạt **1,394 m/s thực tế**, qua 5/5 lượt giữ 60 giây
 rồi dừng trên mặt phẳng. Đây là inference và cải tiến điều khiển; chưa huấn luyện PPO mới.
@@ -15,9 +18,9 @@ tốc độ tiến thực tế trung bình khoảng 1,33 m/s trên mô hình g�
 [Demo 16 môi trường độc lập](docs/SWARM_DEMO.md) đã chạy trên máy 1660 Ti: physics CPU,
 4 worker threads, dựng hình chung trên GPU. Đây là inference policy gốc, chưa có cập nhật PPO.
 
-Mốc mới: [môi trường tự đứng dậy từ nằm ngửa](docs/RECOVERY.md), dùng PPO khởi tạo ngẫu nhiên
+Pilot lưu trữ: [môi trường tự đứng dậy từ nằm ngửa](docs/RECOVERY.md), dùng PPO khởi tạo ngẫu nhiên
 và điều khiển toàn thân. Đây là pilot phát triển môi trường, chưa phải policy đứng dậy đã hội tụ;
-checkpoint đi hiện tại vẫn được giữ riêng.
+checkpoint đi hiện tại vẫn được giữ riêng. Hiện tập trung vào tốc độ và cân bằng, chưa tiếp tục pilot này.
 
 ![G1 trong môi trường mô phỏng, chưa phải policy đã học](docs/images/g1-stairs.png)
 

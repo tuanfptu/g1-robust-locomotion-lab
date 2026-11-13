@@ -1,0 +1,12 @@
+{
+  "seed": 91000,
+  "passed": true,
+  "metric_deltas": {
+    "steady_vx_mps": 0.0,
+    "planar_rmse_mps": 0.0,
+    "stop_speed_mps": 0.0,
+    "yaw_rate_rmse_rad_s": 0.0,
+    "max_abs_heading_rad": 0.0
+  },
+  "reference": "unitree-lab-29dof-heading-v2 validation first episode"
+}

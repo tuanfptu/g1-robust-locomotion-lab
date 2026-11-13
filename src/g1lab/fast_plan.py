@@ -1,5 +1,7 @@
 """Inspectable Isaac Lab speed-stage commands. No simulator imports required."""
 
+import json
+import re
 from pathlib import Path
 
 LAB_REVISION = "4960b84732b0c2ec593dccbfe963fda1bcd7b1e3"
@@ -43,9 +45,15 @@ def command(source, python, usd, cap, envs=512, iterations=1000, seed=42, checkp
         checkpoint = Path(checkpoint).resolve()
         if checkpoint.suffix != ".pt":
             raise ValueError("Resume needs a full RSL-RL .pt checkpoint; exported ONNX cannot resume PPO")
-        argv += ["--resume", "--load_run", checkpoint.parent.name, "--checkpoint", checkpoint.name]
+        argv += [
+            "--resume",
+            "--load_run",
+            re.escape(checkpoint.parent.name),
+            "--checkpoint",
+            re.escape(checkpoint.name),
+        ]
     overrides = {
-        "env.scene.robot.spawn.usd_path": str(usd),
+        "env.scene.robot.spawn.usd_path": json.dumps(str(usd)),
         "env.scene.terrain.terrain_type": "plane",
         "env.scene.terrain.terrain_generator": "null",
         "env.scene.height_scanner": "null",

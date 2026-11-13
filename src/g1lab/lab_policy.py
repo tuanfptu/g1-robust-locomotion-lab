@@ -81,6 +81,12 @@ class LabReference:
             raise ValueError("MuJoCo model does not match upstream joint names")
         actuator_for_joint = {int(j): i for i, j in enumerate(self.model.actuator_trnid[:, 0])}
         self.actuator_ids = np.array([actuator_for_joint[int(j)] for j in joint_ids])
+        self.foot_ids = [
+            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, f"{side}_ankle_roll_link")
+            for side in ("left", "right")
+        ]
+        if min(self.foot_ids) < 0:
+            raise ValueError("Missing foot bodies in MuJoCo model")
         self.qadr = self.model.jnt_qposadr[joint_ids]
         self.vadr = self.model.jnt_dofadr[joint_ids]
         self.kp = np.array(self.config["stiffness"])[mapping]
@@ -125,23 +131,39 @@ class LabReference:
         mujoco.mj_forward(self.model, self.data)
         self.history.reset(self.values())
 
-    def step(self, command):
+    def step(self, command, diagnostics=False):
         self.command[:] = command
         observation = self.history.update(self.values())
         self.action = self.session.run(None, {self.session.get_inputs()[0].name: observation[None]})[0][0]
         if not np.isfinite(self.action).all():
             raise FloatingPointError("Non-finite ONNX action")
         target = self.offset + self.action * self.scale
+        clipped = 0
+        peak_utilization = 0.0
+        limits = self.model.actuator_ctrlrange[self.actuator_ids]
         for _ in range(10):
             self.data.ctrl[self.actuator_ids] = (
                 self.kp * (target - self.data.qpos[self.qadr]) - self.kd * self.data.qvel[self.vadr]
             )
+            if diagnostics:
+                requested = self.data.ctrl[self.actuator_ids]
+                clipped += np.count_nonzero((requested < limits[:, 0]) | (requested > limits[:, 1]))
             mujoco.mj_step(self.model, self.data)
+            if diagnostics:
+                peak_utilization = max(
+                    peak_utilization,
+                    float(
+                        np.max(
+                            np.abs(self.data.actuator_force[self.actuator_ids])
+                            / np.max(np.abs(limits), axis=1)
+                        )
+                    ),
+                )
         velocity = np.zeros(6)
         mujoco.mj_objectVelocity(self.model, self.data, mujoco.mjtObj.mjOBJ_BODY, self.pelvis, velocity, 1)
         upright = float(self.data.xmat[self.pelvis].reshape(3, 3)[2, 2])
         finite = np.isfinite(self.data.qpos).all() and np.isfinite(self.data.qvel).all()
-        return {
+        result = {
             "time_s": float(self.data.time),
             "vx_mps": float(velocity[3]),
             "vy_mps": float(velocity[4]),
@@ -151,3 +173,23 @@ class LabReference:
             "fallen": bool(not finite or self.data.qpos[2] < 0.45 or upright < 0.45),
             "command_vx_mps": float(command[0]),
         }
+        if diagnostics:
+            touching = set()
+            for contact in self.data.contact:
+                if contact.dist <= 0:
+                    bodies = self.model.geom_bodyid[[contact.geom1, contact.geom2]]
+                    if 0 in bodies:
+                        touching.update(int(b) for b in bodies if b in self.foot_ids)
+            speeds = []
+            for foot in touching:
+                mujoco.mj_objectVelocity(self.model, self.data, mujoco.mjtObj.mjOBJ_BODY, foot, velocity, 0)
+                speeds.append(np.linalg.norm(velocity[3:5]))
+            result.update(
+                {
+                    "requested_torque_clipped_fraction": clipped / (10 * 29),
+                    "peak_torque_utilization": peak_utilization,
+                    "feet_in_contact": len(touching),
+                    "contact_foot_speed_mps": float(np.mean(speeds)) if speeds else 0.0,
+                }
+            )
+        return result

@@ -24,6 +24,9 @@ def test_fast_stage_keeps_limits_and_does_not_resume_onnx(tmp_path):
     assert "env.rewards.gait.params.threshold=0.45" in args
     assert "agent.algorithm.learning_rate=0.0001" in args
     assert "--resume" in args
+    assert args[args.index("--checkpoint") + 1] == r"model\.pt"
+    path_args = command(tmp_path, "python", tmp_path / "robot with spaces.usd", 1.0)
+    assert any('spawn.usd_path="' in a and 'robot with spaces.usd"' in a for a in path_args)
     assert not any("effort_limit" in a or "velocity_limit_sim" in a for a in args)
     with pytest.raises(ValueError, match="ONNX"):
         command(tmp_path, "python", tmp_path / "robot.usd", 1.0, checkpoint=tmp_path / "policy.onnx")
@@ -51,3 +54,11 @@ def test_native_lab_policy_joint_mapping_and_repeatability():
         traces.append(policy.data.qpos.copy())
         assert all(not r["fallen"] for r in rows)
     np.testing.assert_allclose(traces[0], traces[1], atol=1e-12)
+
+    # Telemetry must not alter control/physics, and actuator utilization is bounded.
+    policy.reset(42)
+    diagnostic_rows = [policy.step([0.3, 0, 0], diagnostics=True) for _ in range(10)]
+    np.testing.assert_allclose(traces[0], policy.data.qpos, atol=1e-12)
+    assert all(0 <= r["requested_torque_clipped_fraction"] <= 1 for r in diagnostic_rows)
+    assert all(0 <= r["peak_torque_utilization"] <= 1.00001 for r in diagnostic_rows)
+    assert all(0 <= r["feet_in_contact"] <= 2 for r in diagnostic_rows)

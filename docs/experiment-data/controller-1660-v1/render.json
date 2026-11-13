@@ -1,0 +1,36 @@
+{
+  "opengl": {
+    "vendor": "NVIDIA Corporation",
+    "renderer": "NVIDIA GeForce GTX 1660 Ti/PCIe/SSE2",
+    "version": "4.6.0 NVIDIA 595.99.02"
+  },
+  "controller": {
+    "speed": 1.5,
+    "gain": 1.0,
+    "ramp": 3.0,
+    "yaw": 0.16804392721873512
+  },
+  "episode": {
+    "command_mps": 1.5,
+    "seed": 97000,
+    "hold_s": 30,
+    "duration_s": 43.0,
+    "survived": true,
+    "passed": true,
+    "steady_vx_mps": 1.3901697451971635,
+    "planar_rmse_mps": 0.13035597024459053,
+    "stop_speed_mps": 0.0011406718571141496,
+    "yaw_rate_rmse_rad_s": 0.1659765172967517,
+    "max_abs_heading_rad": 0.09210879665249073,
+    "max_tilt_deg": 3.915090336615565,
+    "steady_requested_torque_clipped_fraction": 0.0,
+    "steady_peak_torque_utilization": 0.6521715981101429,
+    "steady_contact_foot_speed_mps": 0.14182061104968763
+  },
+  "wall_s": 20.201631376003206,
+  "physics": "CPU MuJoCo",
+  "inference": "ONNX Runtime CPU",
+  "training_updates": 0,
+  "video": "g1-1660.mp4",
+  "seed": 97000
+}

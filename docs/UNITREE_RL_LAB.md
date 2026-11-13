@@ -60,7 +60,7 @@ bash scripts/fetch_lab.sh
 
 Thư mục output phải chưa tồn tại. Bỏ `--heading-hold` để đo ONNX nguyên bản. Có thể dùng
 `--policy-dir` trỏ tới bundle chứa `params/deploy.yaml` và `exported/policy.onnx` cùng hợp đồng
-khớp/quan sát. Phép thử bổ sung 1,6/1,65/1,7 gọi `trial` trong script, seed 92000–92002,
+khớp/quan sát. Phép thử bổ sung 1,6/1,65/1,7 gọi `trial` (hiện ở `g1lab.lab_evaluation`), seed 92000–92002,
 `hold=30, heading_hold=True`; protocol và bảng kết quả được lưu riêng trong snapshot v3.
 
 Nguồn được ghim:
