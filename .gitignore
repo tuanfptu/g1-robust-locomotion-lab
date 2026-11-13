@@ -1,4 +1,6 @@
-.venv/
+.venv*/
+/TRANSFER_MANIFEST.json
+/TRANSFER_SHA256SUMS
 __pycache__/
 runs/
 *.egg-info/

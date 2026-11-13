@@ -40,3 +40,10 @@ that deployment contract in Python. No policy weights or upstream robot assets f
 repositories are redistributed here. This is distinct from the older 12-leg-joint RL Gym teacher.
 Our command generator prepares experimental training overrides; it does not replace upstream
 Isaac Lab, RSL-RL or claim a new RL algorithm.
+
+## Private RTX handoff archive
+
+`scripts/package_5090.py` builds a local, ignored transfer archive containing the pinned public
+Unitree RL Lab and G1 MuJoCo sources/assets/ONNX used in this project. Their license texts are
+included under `licenses/` in the archive. This does not add vendor weights or Git object stores
+to this repository; downstream use remains subject to the respective upstream licenses.
