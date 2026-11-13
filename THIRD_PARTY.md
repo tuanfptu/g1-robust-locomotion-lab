@@ -45,5 +45,5 @@ Isaac Lab, RSL-RL or claim a new RL algorithm.
 
 `scripts/package_5090.py` builds a local, ignored transfer archive containing the pinned public
 Unitree RL Lab and G1 MuJoCo sources/assets/ONNX used in this project. Their license texts are
-included under `licenses/` in the archive. This does not add vendor weights or Git object stores
+included under `artifacts/transfer/licenses/` in the archive. This does not add vendor weights or Git object stores
 to this repository; downstream use remains subject to the respective upstream licenses.

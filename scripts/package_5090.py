@@ -81,7 +81,7 @@ def main(output):
                 config += "[core]\n\tsparseCheckout = true\n\tsparseCheckoutCone = true\n"
                 config += '[remote "origin"]\n\tpromisor = true\n\tpartialclonefilter = blob:none\n'
             (metadata / "config").write_text(config)
-            licenses = stage / "licenses"
+            licenses = transfer / "licenses"
             licenses.mkdir(exist_ok=True)
             license_name = "LICENCE" if name == "unitree_rl_lab" else "LICENSE"
             (licenses / f"{name}-LICENSE.txt").write_text(
