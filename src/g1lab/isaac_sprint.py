@@ -285,11 +285,15 @@ def staged_lean(env, command_name, asset_cfg, v0, v1, base, per_speed, per_accel
     return _gate(env, command_name, v0, v1) * torch.square(error)
 
 
-def run_yaw_rate_error(env, command_name, v0, v1, asset_cfg=SceneEntityCfg("robot")):
-    """Squared pelvis yaw-rate error vs. the (heading-hold) command while running: penalises body twisting."""
+def run_yaw_tracking(env, command_name, v0, v1, std, asset_cfg=SceneEntityCfg("robot")):
+    """Bounded, non-negative yaw-rate tracking bonus while running: exp(-error^2 / std^2).
+
+    A squared-error penalty here made dying early the best option (episode length collapsed 618 -> 58 steps in
+    the first spec run), so body twisting is discouraged by a bonus that only rewards staying on heading.
+    """
     wz = env.scene[asset_cfg.name].data.root_ang_vel_b[:, 2]
     error = wz - env.command_manager.get_command(command_name)[:, 2]
-    return _gate(env, command_name, v0, v1) * torch.square(error)
+    return _gate(env, command_name, v0, v1) * torch.exp(-torch.square(error) / std**2)
 
 
 def torso_roll_l2(env, command_name, asset_cfg, v0, v1):
@@ -351,7 +355,8 @@ SPRINT_WEIGHTS = {
     "knee_lift": 0.5,
     "swing_dorsiflexion": 0.3,
     "arm_leg_counter_swing": 0.3,
-    "run_yaw_rate_error": -2.0,
+    "run_yaw_tracking": 1.0,
+    "termination": -100.0,
     "staged_lean": -20.0,
     "torso_roll": -5.0,
     "run_joint_deviation_arms": -0.1,
@@ -551,9 +556,11 @@ class SprintEnvCfg(V0GainsEnvCfg):
                 ),
             },
         )
-        r.run_yaw_rate_error = RewTerm(
-            func=run_yaw_rate_error, weight=w["run_yaw_rate_error"], params=dict(gate)
+        r.run_yaw_tracking = RewTerm(
+            func=run_yaw_tracking, weight=w["run_yaw_tracking"], params={**gate, "std": 0.5}
         )
+        # Falling (not timing out) always costs more than any penalty saved by ending the episode early.
+        r.termination = RewTerm(func=lab_mdp.is_terminated, weight=w["termination"])
         self.scene.robot = self.scene.robot.replace(actuators=spec_actuators())
         add_domain_randomization(self)
 

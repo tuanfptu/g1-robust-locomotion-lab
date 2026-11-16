@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = ROOT.parents[1]
 GPU0_UUID = "GPU-4bb4ac0c-5f15-959c-dc6e-d6b9632cd45f"
 KNOBS = [
-    {"name": "yaw_penalty_-4", "overrides": {"env.rewards.run_yaw_rate_error.weight": -4.0}},
+    {"name": "yaw_tracking_run_2.0", "overrides": {"env.rewards.run_yaw_tracking.weight": 2.0}},
     {"name": "yaw_tracking_1.0", "overrides": {"env.rewards.track_ang_vel_z.weight": 1.0}},
     {"name": "track_weight_1.5", "overrides": {"env.rewards.track_lin_vel_xy.weight": 1.5}},
     {
@@ -69,7 +69,7 @@ class Autopilot:
                 "level": args.start_level,
                 "lr": args.lr,
                 "knobs_applied": [],
-                "overrides": {},
+                "overrides": dict(item.split("=", 1) for item in args.override),
                 "stall": 0,
                 "consecutive_failures": 0,
                 "best_isaac": None,
@@ -759,6 +759,12 @@ def main():
     parser.add_argument("--stall-rounds", type=int, default=3)
     parser.add_argument("--mujoco-workers", type=int, default=4)
     parser.add_argument("--min-free-gb", type=float, default=50.0)
+    parser.add_argument(
+        "--override",
+        action="append",
+        default=[],
+        help="Hydra override applied to every round, e.g. agent.algorithm.entropy_coef=0.001 (repeatable)",
+    )
     args = parser.parse_args()
     pilot = Autopilot(args)
     signal.signal(signal.SIGTERM, lambda *_: (pilot.stop.set(), pilot.kill_child()))

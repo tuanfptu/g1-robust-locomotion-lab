@@ -1,7 +1,12 @@
 # Autopilot sprint (chạy qua đêm, không cần mạng)
 
-Lượt hiện tại: `artifacts/autopilot-spec-20261116/` (bắt đầu 16/11/2026 09:34, **không hạn chót**), xuất phát từ
-bản tốt nhất của lượt trước (`checkpoints/round7-best/model.pt`). Mã: [scripts/autopilot_sprint.py](../scripts/autopilot_sprint.py).
+Lượt hiện tại: `artifacts/autopilot-spec2-20261116/` (bắt đầu 16/11/2026 10:07, **không hạn chót**), xuất phát từ
+bản tốt nhất của lượt trước (`checkpoints/round7-best/model.pt`), dải tốc độ khởi đầu 3,0 m/s, entropy 0,001.
+
+`autopilot-spec-20261116/` (09:34–09:53) bị dừng: phạt bình phương sai lệch quay khiến policy học cách ngã sớm
+(độ dài tập 618 → 58 bước). Đã thay bằng thưởng có chặn exp(−sai lệch²/0,25) và thêm phạt ngã −100; entropy 0,01
+làm nhiễu action tăng và ngã nhiều với động cơ đúng thông số nên giảm còn 0,001. Kiểm tra 200 iteration trước khi
+chạy lại: độ dài tập ~920–950, ngã 8–15%, reward tăng đều, curriculum bắt đầu tăng. Mã: [scripts/autopilot_sprint.py](../scripts/autopilot_sprint.py).
 
 ### Lượt trước `autopilot-continuous-20261113` (13–16/11, 170 vòng) — đã dừng
 
@@ -30,8 +35,8 @@ bản tốt nhất của lượt trước (`checkpoints/round7-best/model.pt`). 
 
 ```bash
 cd ~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab
-cat artifacts/autopilot-spec-20261116/REPORT.md        # bảng từng vòng + tốt nhất + kiểm chứng cuối
-tail -30 artifacts/autopilot-spec-20261116/autopilot.log
+cat artifacts/autopilot-spec2-20261116/REPORT.md        # bảng từng vòng + tốt nhất + kiểm chứng cuối
+tail -30 artifacts/autopilot-spec2-20261116/autopilot.log
 ps -eo pid,etime,args | grep "[a]utopilot_sprint"       # còn chạy không
 ```
 
@@ -46,7 +51,7 @@ ps -eo pid,etime,args | grep "[a]utopilot_sprint"       # còn chạy không
 Dừng êm sau vòng đang chạy (rồi tự đánh giá cuối: thang Isaac 1–11 m/s + MuJoCo 10 seed, giữ 60 s):
 
 ```bash
-echo '{"stop": true}' > artifacts/autopilot-spec-20261116/control.json
+echo '{"stop": true}' > artifacts/autopilot-spec2-20261116/control.json
 ```
 
 Đặt hạn chót tính từ bây giờ: `echo '{"hours_from_now": 2}' > .../control.json`.
