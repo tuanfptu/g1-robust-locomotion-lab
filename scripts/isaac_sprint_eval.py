@@ -79,7 +79,12 @@ def main():
     cfg.curriculum.lin_vel_cmd_levels = None
     c = cfg.commands.base_velocity
     c.ranges.lin_vel_x = (0.0, 0.0)
-    c.ranges.ang_vel_z = (0.0, 0.0)
+    # Heading hold like the MuJoCo benchmark: target heading 0, yaw-rate command = clip(1.0 * error, +-0.2).
+    c.heading_command = True
+    c.rel_heading_envs = 1.0
+    c.heading_control_stiffness = 1.0
+    c.ranges.heading = (0.0, 0.0)
+    c.ranges.ang_vel_z = (-0.2, 0.2)
     c.limit_ranges.lin_vel_x = (0.0, max(speeds))
     c.rel_standing_envs = 0.0
     c.resampling_time_range = (1.0e6, 1.0e6)
@@ -87,6 +92,10 @@ def main():
     cfg.events.push_robot = None
     cfg.events.add_base_mass = None
     cfg.events.physics_material = None
+    for (
+        name
+    ) in sp.DR_EVENT_NAMES:  # nominal robot for evaluation; latency randomisation stays in the actuators
+        setattr(cfg.events, name, None)
     accel = c.accel_limit
     duration = max(speeds) / accel + args.settle + args.hold
     cfg.episode_length_s = duration + 5.0
@@ -106,6 +115,7 @@ def main():
     obs, _ = env.reset()
     term.target_b[:, 0] = target
     alive = torch.ones(n, dtype=torch.bool, device=base.device)
+    heading_max = torch.zeros(n, device=base.device)
     keys = [
         "vx",
         "vy",
@@ -128,6 +138,8 @@ def main():
             term.target_b[:, 0] = torch.where(alive, target, term.target_b[:, 0])
             obs, _, terminated, truncated, _ = env.step(actor(obs["policy"]))
             alive &= ~(terminated | truncated)
+            heading = torch.abs(sp.wrap_to_pi(robot.data.heading_w))
+            heading_max = torch.where(alive, torch.maximum(heading_max, heading), heading_max)
             t = (step + 1) * base.step_dt
             window = alive & (t >= start) & (t < stop)
             w = window.float()
@@ -180,10 +192,17 @@ def main():
                     else None
                 ),
                 "mean_torso_pitch_deg": m("pitch"),
+                "max_heading_deg": float(torch.rad2deg(heading_max[sl][ok]).max()) if k else None,
             }
         )
     passed = [
-        g for g in groups if g["survival"] >= 0.9 and g["vx_ratio"] is not None and g["vx_ratio"] >= 0.85
+        g
+        for g in groups
+        if g["survival"] >= 0.9
+        and g["vx_ratio"] is not None
+        and g["vx_ratio"] >= 0.85
+        and g["yaw_rate_rms"] < 0.25
+        and g["max_heading_deg"] < 30.0
     ]
     out = {
         "policy": str(Path(args.policy).resolve()),
@@ -193,7 +212,11 @@ def main():
         "hold_s": args.hold,
         "envs_per_speed": per,
         "seed": args.seed,
-        "criteria": "survival >= 0.9 and mean vx >= 0.85 * command over the hold window",
+        "criteria": "survival >= 0.9, mean vx >= 0.85 * command, yaw-rate RMS < 0.25 rad/s, max heading < 30 deg",
+        "max_speed_ignoring_yaw_mps": max(
+            (g["speed_cmd_mps"] for g in groups if g["survival"] >= 0.9 and (g["vx_ratio"] or 0) >= 0.85),
+            default=0.0,
+        ),
         "max_sustained_speed_mps": max((g["speed_cmd_mps"] for g in passed), default=0.0),
         "max_mean_vx_mps": max((g["mean_vx_mps"] for g in groups if g["survival"] >= 0.9), default=0.0),
         "wall_time_s": time.time() - started,

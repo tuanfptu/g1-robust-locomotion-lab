@@ -1,7 +1,8 @@
 """MuJoCo speed-ladder benchmark of an exported policy bundle with sprint gait metrics (CPU, offline).
 
 Same pass criteria as the controller benchmark (no fall, vx >= 85% command, planar RMSE, yaw RMS, heading,
-stop), heading hold on. Ramp time scales with speed (speed / accel, at least 3 s). Run with .venv-eval.
+stop), heading hold on, plus the shared actuator envelope (g1lab.actuator_spec): torque-speed derating and
+motor friction applied, and no joint faster than its rated speed. Ramp time scales with speed (speed / accel, at least 3 s). Run with .venv-eval.
 """
 
 import argparse
@@ -16,7 +17,7 @@ def run_one(job):
     from g1lab.lab_policy import LabReference
 
     policy_dir, speed, seed, hold, accel = job
-    env = LabReference(policy_dir=policy_dir)
+    env = LabReference(policy_dir=policy_dir, spec=True)
     ramp = max(3.0, speed / accel)
     result, _ = trial(
         env, speed, seed, hold=hold, heading_hold=True, heading_gain=1.0, ramp=ramp, diagnostics=True

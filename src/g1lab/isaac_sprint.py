@@ -19,19 +19,24 @@ import math
 from collections.abc import Sequence
 from dataclasses import MISSING
 
+import isaaclab.envs.mdp as lab_mdp
 import isaaclab.sim as sim_utils
 import isaaclab.terrains as terrain_gen
 import torch
+from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.envs.mdp.commands.velocity_command import UniformVelocityCommand
+from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensorCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-from isaaclab.utils.math import quat_apply, quat_apply_inverse, yaw_quat
+from isaaclab.utils.math import quat_apply, quat_apply_inverse, wrap_to_pi, yaw_quat
+from unitree_rl_lab.assets.robots.unitree_actuators import UnitreeActuatorCfg
 from unitree_rl_lab.tasks.locomotion import mdp as vendor_mdp
 from unitree_rl_lab.tasks.locomotion.mdp.commands import UniformLevelVelocityCommandCfg
 
+from g1lab.actuator_spec import SPEC
 from g1lab.isaac_v0_cfg import V0GainsEnvCfg
 
 FEET = ["left_ankle_roll_link", "right_ankle_roll_link"]
@@ -78,6 +83,12 @@ class SprintVelocityCommand(UniformVelocityCommand):
         self.vel_command_b[:, 0] += step
         self.vel_command_b[:, 1:] = target[:, 1:]
         self.accel_x = step / dt
+        if self.cfg.heading_command:
+            # Hold a sampled heading (like the MuJoCo benchmark's heading hold): yaw-rate command from heading error.
+            ids = self.is_heading_env & ~self.is_standing_env
+            error = wrap_to_pi(self.heading_target - self.robot.data.heading_w)
+            yaw = torch.clip(self.cfg.heading_control_stiffness * error, *self.cfg.ranges.ang_vel_z)
+            self.vel_command_b[:, 2] = torch.where(ids, yaw, self.vel_command_b[:, 2])
 
 
 @configclass
@@ -274,6 +285,13 @@ def staged_lean(env, command_name, asset_cfg, v0, v1, base, per_speed, per_accel
     return _gate(env, command_name, v0, v1) * torch.square(error)
 
 
+def run_yaw_rate_error(env, command_name, v0, v1, asset_cfg=SceneEntityCfg("robot")):
+    """Squared pelvis yaw-rate error vs. the (heading-hold) command while running: penalises body twisting."""
+    wz = env.scene[asset_cfg.name].data.root_ang_vel_b[:, 2]
+    error = wz - env.command_manager.get_command(command_name)[:, 2]
+    return _gate(env, command_name, v0, v1) * torch.square(error)
+
+
 def torso_roll_l2(env, command_name, asset_cfg, v0, v1):
     _, g_b = torso_pitch(env, asset_cfg)
     return _gate(env, command_name, v0, v1) * torch.square(g_b[:, 1])
@@ -332,7 +350,8 @@ SPRINT_WEIGHTS = {
     "forefoot_touchdown": 1.0,
     "knee_lift": 0.5,
     "swing_dorsiflexion": 0.3,
-    "arm_leg_counter_swing": 0.5,
+    "arm_leg_counter_swing": 0.3,
+    "run_yaw_rate_error": -2.0,
     "staged_lean": -20.0,
     "torso_roll": -5.0,
     "run_joint_deviation_arms": -0.1,
@@ -393,14 +412,18 @@ class SprintEnvCfg(V0GainsEnvCfg):
             asset_name="robot",
             resampling_time_range=(4.0, 8.0),
             rel_standing_envs=0.1,
-            rel_heading_envs=0.0,
-            heading_command=False,
+            rel_heading_envs=1.0,
+            heading_command=True,
+            heading_control_stiffness=1.0,
             debug_vis=False,  # arrow markers are remote assets
             ranges=SprintVelocityCommandCfg.Ranges(
-                lin_vel_x=(0.0, 1.5), lin_vel_y=(0.0, 0.0), ang_vel_z=(-0.2, 0.2)
+                lin_vel_x=(0.0, 1.5), lin_vel_y=(0.0, 0.0), ang_vel_z=(-0.5, 0.5), heading=(-0.5, 0.5)
             ),
             limit_ranges=SprintVelocityCommandCfg.Ranges(
-                lin_vel_x=(0.0, self.sprint_speed_limit), lin_vel_y=(0.0, 0.0), ang_vel_z=(-0.2, 0.2)
+                lin_vel_x=(0.0, self.sprint_speed_limit),
+                lin_vel_y=(0.0, 0.0),
+                ang_vel_z=(-0.5, 0.5),
+                heading=(-0.5, 0.5),
             ),
             accel_limit=2.0,
             decel_limit=2.5,
@@ -528,6 +551,116 @@ class SprintEnvCfg(V0GainsEnvCfg):
                 ),
             },
         )
+        r.run_yaw_rate_error = RewTerm(
+            func=run_yaw_rate_error, weight=w["run_yaw_rate_error"], params=dict(gate)
+        )
+        self.scene.robot = self.scene.robot.replace(actuators=spec_actuators())
+        add_domain_randomization(self)
+
+
+def _leg_motor(joints, kp, kd, spec):
+    return UnitreeActuatorCfg(
+        joint_names_expr=joints,
+        stiffness=kp,
+        damping=kd,
+        armature=0.01,
+        effort_limit=spec["y2"],
+        effort_limit_sim=spec["y2"],
+        velocity_limit=spec["x2"],
+        velocity_limit_sim=spec["x2"],
+        Y1=spec["y1"],
+        Y2=spec["y2"],
+        X1=spec["x1"],
+        X2=spec["x2"],
+        Fs=spec["fs"],
+        Fd=spec["fd"],
+        min_delay=0,  # action latency randomised per env: 0-4 physics steps (0-20 ms)
+        max_delay=4,
+    )
+
+
+def spec_actuators():
+    """Actuators bounded by g1lab.actuator_spec (never looser than any source); PD gains of the v0 policy.
+
+    N7520 leg/waist-yaw motors use Unitree's torque-speed curve, motor friction and random latency (explicit
+    PD at the 200 Hz physics rate). Other joints stay implicit with the tightest flat torque limit and their
+    rated velocity limit.
+    """
+    hip = SPEC["left_hip_pitch_joint"]
+    actuators = {
+        "N7520-14.3-hip": _leg_motor([".*_hip_pitch_joint", ".*_hip_yaw_joint"], 100.0, 2.0, hip),
+        "N7520-14.3-waist": _leg_motor(["waist_yaw_joint"], 200.0, 5.0, SPEC["waist_yaw_joint"]),
+        "N7520-22.5-hip-roll": _leg_motor([".*_hip_roll_joint"], 100.0, 2.0, SPEC["left_hip_roll_joint"]),
+        "N7520-22.5-knee": _leg_motor([".*_knee_joint"], 150.0, 4.0, SPEC["left_knee_joint"]),
+    }
+    flat = {
+        "N5020-ankle": ([".*_ankle_.*"], 40.0, 2.0, "left_ankle_pitch_joint"),
+        "N5020-waist": (["waist_roll_joint", "waist_pitch_joint"], 200.0, 5.0, "waist_roll_joint"),
+        "N5020-arm": (
+            [".*_shoulder_.*", ".*_elbow_joint", ".*_wrist_roll_joint"],
+            40.0,
+            10.0,
+            "left_shoulder_pitch_joint",
+        ),
+        "W4010-wrist": ([".*_wrist_pitch_joint", ".*_wrist_yaw_joint"], 40.0, 10.0, "left_wrist_pitch_joint"),
+    }
+    for name, (joints, kp, kd, ref) in flat.items():
+        spec = SPEC[ref]
+        actuators[name] = ImplicitActuatorCfg(
+            joint_names_expr=joints,
+            stiffness=kp,
+            damping=kd,
+            armature=0.01,
+            effort_limit_sim=spec["y1"],
+            velocity_limit_sim=spec["vel"],
+        )
+    return actuators
+
+
+def add_domain_randomization(cfg):
+    """Physical and actuator randomisation on top of the vendor's (friction 0.3-1.0, torso +[-1, 3] kg, pushes)."""
+    e = cfg.events
+    e.scale_link_mass = EventTerm(
+        func=lab_mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+            "mass_distribution_params": (0.9, 1.1),
+            "operation": "scale",
+        },
+    )
+    e.torso_com = EventTerm(
+        func=lab_mdp.randomize_rigid_body_com,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "com_range": {"x": (-0.03, 0.03), "y": (-0.02, 0.02), "z": (-0.03, 0.03)},
+        },
+    )
+    e.actuator_gains = EventTerm(
+        func=lab_mdp.randomize_actuator_gains,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "stiffness_distribution_params": (0.9, 1.1),
+            "damping_distribution_params": (0.8, 1.2),
+            "operation": "scale",
+        },
+    )
+    e.joint_armature = EventTerm(
+        func=lab_mdp.randomize_joint_parameters,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "armature_distribution_params": (0.8, 1.2),
+            "operation": "scale",
+        },
+    )
+    e.push_robot.interval_range_s = (3.0, 7.0)
+    e.push_robot.params["velocity_range"] = {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-0.3, 0.3)}
+
+
+DR_EVENT_NAMES = ("scale_link_mass", "torso_com", "actuator_gains", "joint_armature")
 
 
 def lean_target_deg(speed, accel):

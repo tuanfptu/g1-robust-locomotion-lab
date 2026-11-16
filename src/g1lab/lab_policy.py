@@ -50,7 +50,11 @@ def sdk_names(source):
 
 class LabReference:
     def __init__(
-        self, source="vendor/unitree_rl_lab", mujoco_source="vendor/unitree_mujoco", policy_dir=None
+        self,
+        source="vendor/unitree_rl_lab",
+        mujoco_source="vendor/unitree_mujoco",
+        policy_dir=None,
+        spec=False,
     ):
         import onnxruntime as ort
         import yaml
@@ -95,6 +99,20 @@ class LabReference:
         self.torso = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "torso_link")
         self.body_weight = float(self.model.body_mass.sum() * 9.81)
         self.gait_log = []
+        self.max_joint_speed_ratio = 0.0
+        # spec=True: apply the shared actuator envelope (g1lab.actuator_spec) on top of the MuJoCo ctrlrange:
+        # torque-speed derating and motor friction for N7520 joints, the tightest flat limit elsewhere.
+        # Off by default so earlier benchmarks stay bit-exact.
+        self.spec = spec
+        if spec:
+            from g1lab.actuator_spec import SPEC
+
+            rows = [SPEC[name] for name in ordered_names]
+            self.spec_arrays = {
+                k: np.array([r[k] for r in rows], dtype=float)
+                for k in ("y1", "y2", "x1", "x2", "fs", "fd", "vel")
+            }
+        self.max_joint_speed_ratio = 0.0
         self.qadr = self.model.jnt_qposadr[joint_ids]
         self.vadr = self.model.jnt_dofadr[joint_ids]
         self.kp = np.array(self.config["stiffness"])[mapping]
@@ -139,6 +157,20 @@ class LabReference:
         mujoco.mj_forward(self.model, self.data)
         self.history.reset(self.values())
         self.gait_log = []
+
+    def _spec_torque(self, torque, velocity):
+        a = self.spec_arrays
+        peak = np.where(velocity * torque > 0, a["y1"], a["y2"])
+        speed = np.abs(velocity)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            derate = np.where(
+                speed <= a["x1"], 1.0, np.clip((a["x2"] - speed) / (a["x2"] - a["x1"]), 0.0, 1.0)
+            )
+        limit = peak * derate
+        torque = np.clip(torque, -limit, limit)
+        torque = torque - (a["fs"] * np.tanh(velocity / 0.01) + a["fd"] * velocity)
+        self.max_joint_speed_ratio = max(self.max_joint_speed_ratio, float(np.max(speed / a["vel"])))
+        return torque
 
     def _gait_sample(self):
         """(time, contact L, R, toe L, R, heel L, R, forward ground force N, normal force L, R); read-only.
@@ -185,9 +217,10 @@ class LabReference:
         peak_utilization = 0.0
         limits = self.model.actuator_ctrlrange[self.actuator_ids]
         for _ in range(10):
-            self.data.ctrl[self.actuator_ids] = (
-                self.kp * (target - self.data.qpos[self.qadr]) - self.kd * self.data.qvel[self.vadr]
-            )
+            torque = self.kp * (target - self.data.qpos[self.qadr]) - self.kd * self.data.qvel[self.vadr]
+            if self.spec:
+                torque = self._spec_torque(torque, self.data.qvel[self.vadr])
+            self.data.ctrl[self.actuator_ids] = torque
             if diagnostics:
                 requested = self.data.ctrl[self.actuator_ids]
                 clipped += np.count_nonzero((requested < limits[:, 0]) | (requested > limits[:, 1]))

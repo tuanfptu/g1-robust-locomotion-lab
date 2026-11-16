@@ -130,6 +130,9 @@ def trial(
         and yaw < 0.25
         and heading < np.pi / 6
     )
+    if getattr(env, "spec", False):
+        # "Do not exceed the technical spec": no joint may run faster than its rated/no-load speed.
+        passed = passed and env.max_joint_speed_ratio <= 1.0
     result = {
         "command_mps": speed,
         "seed": seed,
@@ -143,6 +146,9 @@ def trial(
         "yaw_rate_rmse_rad_s": yaw,
         "max_abs_heading_rad": heading,
     }
+    if getattr(env, "spec", False):
+        result["spec_envelope"] = True
+        result["max_joint_speed_ratio"] = env.max_joint_speed_ratio
     if diagnostics:
         result.update(sprint_gait(env, rows, hold_start + 5, hold_start + hold, ramp))
         result.update(

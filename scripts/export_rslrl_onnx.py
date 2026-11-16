@@ -8,10 +8,22 @@ Only plain MLP actors without observation normalization are supported; anything 
 import argparse
 import hashlib
 import json
-import shutil
 from pathlib import Path
 
 import torch
+
+
+def sanitized_deploy(path):
+    """Isaac's export may write `!!python/tuple`; rewrite as plain YAML so yaml.safe_load (MuJoCo side) reads it."""
+    import yaml
+
+    class Loader(yaml.SafeLoader):
+        pass
+
+    Loader.add_constructor(
+        "tag:yaml.org,2002:python/tuple", lambda loader, node: loader.construct_sequence(node)
+    )
+    return yaml.safe_dump(yaml.load(Path(path).read_text(), Loader=Loader), sort_keys=False)
 
 
 def main(args):
@@ -38,7 +50,7 @@ def main(args):
     output.mkdir(parents=True, exist_ok=False)
     (output / "exported").mkdir()
     (output / "params").mkdir()
-    shutil.copy2(deploy, output / "params/deploy.yaml")
+    (output / "params/deploy.yaml").write_text(sanitized_deploy(deploy))
     onnx_path = output / "exported/policy.onnx"
     dummy = torch.zeros(1, actor[0].in_features)
     torch.onnx.export(

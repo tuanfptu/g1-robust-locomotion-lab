@@ -30,8 +30,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = ROOT.parents[1]
 GPU0_UUID = "GPU-4bb4ac0c-5f15-959c-dc6e-d6b9632cd45f"
 KNOBS = [
+    {"name": "yaw_penalty_-4", "overrides": {"env.rewards.run_yaw_rate_error.weight": -4.0}},
+    {"name": "yaw_tracking_1.0", "overrides": {"env.rewards.track_ang_vel_z.weight": 1.0}},
     {"name": "track_weight_1.5", "overrides": {"env.rewards.track_lin_vel_xy.weight": 1.5}},
-    {"name": "track_std_0.75", "overrides": {"env.rewards.track_lin_vel_xy.params.std": 0.75}},
     {
         "name": "accel_3.0",
         "overrides": {
@@ -121,15 +122,30 @@ class Autopilot:
         return code
 
     def kill_child(self):
-        if self.child and self.child.poll() is None:
+        """SIGTERM the child's process group, then SIGKILL it: Isaac/Kit can ignore SIGTERM and survive as an
+        orphan holding the GPU (seen once, ran 15 h)."""
+        if not self.child:
+            return
+        pgid = self.child.pid
+        for sig, wait in ((signal.SIGTERM, 20), (signal.SIGKILL, 15)):
             try:
-                os.killpg(self.child.pid, signal.SIGTERM)
-                self.child.wait(30)
-            except Exception:
+                os.killpg(pgid, sig)
+            except ProcessLookupError:
+                break
+            end = time.time() + wait
+            while time.time() < end:
                 try:
-                    os.killpg(self.child.pid, signal.SIGKILL)
-                except Exception:
-                    pass
+                    os.killpg(pgid, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(1)
+            else:
+                continue
+            break
+        try:
+            self.child.wait(5)
+        except Exception:
+            pass
 
     def guard(self):
         """Stop everything if any process of this workspace shows up on GPU0 (compute or graphics)."""
@@ -224,10 +240,24 @@ class Autopilot:
         }
 
     def isaac_eval(self, ckpt, round_dir, top):
+        """Two independent evaluations (seeds 0, 1; 32 robots per speed); scores are the worse of the two."""
+        results = []
+        for seed in (0, 1):
+            ev = self.isaac_eval_once(ckpt, round_dir, top, seed)
+            if ev is None:
+                return None
+            results.append(ev)
+        merged = dict(results[0])
+        for key in ("max_sustained_speed_mps", "max_speed_ignoring_yaw_mps", "max_mean_vx_mps"):
+            merged[key] = min(r.get(key, 0.0) for r in results)
+        merged["per_seed_max_sustained_mps"] = [r["max_sustained_speed_mps"] for r in results]
+        return merged
+
+    def isaac_eval_once(self, ckpt, round_dir, top, seed):
         speeds = [1.0]
         while speeds[-1] < top - 1e-9:
             speeds.append(round(speeds[-1] + 0.5, 2))
-        out = round_dir / "isaac_eval.json"
+        out = round_dir / f"isaac_eval_seed{seed}.json"
         code = self.run(
             [
                 self.args.isaac_python,
@@ -239,11 +269,13 @@ class Autopilot:
                 "--speeds",
                 ",".join(f"{s:g}" for s in speeds),
                 "--envs_per_speed",
-                16,
+                32,
+                "--seed",
+                seed,
                 "--output",
                 out,
             ],
-            round_dir / "isaac_eval.log",
+            round_dir / f"isaac_eval_seed{seed}.log",
             timeout=1800,
         )
         return json.loads(out.read_text()) if code == 0 and out.exists() else None
@@ -330,6 +362,12 @@ class Autopilot:
                 continue
             result = json.loads(job["out"].read_text())
             speed = result["max_speed_all_seeds_passed_mps"]
+            if job["kind"] == "validation_mujoco":
+                best = self.state["best_mujoco"]
+                if best and best["round"] == job["round"]:
+                    best["validation_10seeds_60s_max_passed_mps"] = speed
+                self.event("mujoco_best_validation_done", round=job["round"], max_passed=speed)
+                continue
             if job["kind"] == "validation":
                 summary = {
                     "round": job["round"],
@@ -354,6 +392,21 @@ class Autopilot:
             if best is None or speed > best["speed"]:
                 self.state["best_mujoco"] = {"speed": speed, "round": job["round"], "bundle": job["bundle"]}
                 self.event("new_best_mujoco", speed=speed, round=job["round"])
+                keep = self.out / "best_mujoco"
+                shutil.rmtree(keep, ignore_errors=True)
+                shutil.copytree(job["bundle"], keep / "policy")
+                if speed > 0:
+                    self.start_mujoco(
+                        keep / "policy",
+                        self.out / f"round_{job['round']:03d}",
+                        speed,
+                        job["round"],
+                        seeds=10,
+                        hold=60.0,
+                        seed0=99000,
+                        name="mujoco_validation_best_mujoco",
+                        kind="validation_mujoco",
+                    )
         self.save()
 
     # ------------------------------------------------------------------ loop
@@ -430,25 +483,53 @@ class Autopilot:
                 if ev is None
                 else {
                     "max_sustained_speed_mps": ev["max_sustained_speed_mps"],
+                    "max_speed_ignoring_yaw_mps": ev.get("max_speed_ignoring_yaw_mps"),
+                    "per_seed_max_sustained_mps": ev.get("per_seed_max_sustained_mps"),
                     "max_mean_vx_mps": ev["max_mean_vx_mps"],
                     "groups": ev["groups"],
                 }
             )
             bundle = self.export(train["checkpoint"], round_dir)
             if bundle and ev:
-                self.start_mujoco(bundle, round_dir, max(1.5, ev["max_sustained_speed_mps"] + 0.5), n)
+                top_mj = max(ev["max_sustained_speed_mps"], ev.get("max_speed_ignoring_yaw_mps", 0.0))
+                self.start_mujoco(bundle, round_dir, max(1.5, top_mj + 0.5), n)
             if ev is None:
                 self.event("isaac_eval_failed", round=n)
                 self.state["latest_ckpt"] = train["checkpoint"]
             else:
                 self.decide(n, train["checkpoint"], ev, bundle)
-                self.push_curriculum(entry["level_in"], train["level"], ev["max_sustained_speed_mps"])
+                # Curriculum follows running capability (speed criteria only); best selection uses all criteria.
+                self.push_curriculum(
+                    entry["level_in"], train["level"], ev.get("max_speed_ignoring_yaw_mps", 0.0)
+                )
             entry["level_out"] = self.state["level"]
             self.state["rounds"].append(entry)
             self.save()
         self.finish()
 
+    def keep_capability(self, n, ckpt, ev, bundle):
+        """Also keep the fastest policy by speed criteria alone (yaw not yet fixed), within the actuator spec."""
+        cap = ev.get("max_speed_ignoring_yaw_mps", 0.0)
+        group = next((g for g in ev["groups"] if g["speed_cmd_mps"] == cap), {})
+        best = self.state.get("best_capability")
+        if best is None or cap > best["speed"]:
+            keep = self.out / "best_capability"
+            keep.mkdir(exist_ok=True)
+            shutil.copy2(ckpt, keep / "model.pt")
+            if bundle:
+                shutil.rmtree(keep / "policy", ignore_errors=True)
+                shutil.copytree(bundle, keep / "policy")
+            self.state["best_capability"] = {
+                "speed": cap,
+                "round": n,
+                "yaw_rate_rms": group.get("yaw_rate_rms"),
+                "flight_fraction": group.get("flight_fraction"),
+                "ckpt": str(keep / "model.pt"),
+            }
+            self.event("new_best_capability", round=n, speed=cap, yaw=group.get("yaw_rate_rms"))
+
     def decide(self, n, ckpt, ev, bundle):
+        self.keep_capability(n, ckpt, ev, bundle)
         speed = ev["max_sustained_speed_mps"]
         group = next((g for g in ev["groups"] if g["speed_cmd_mps"] == speed), {})
         vx = group.get("mean_vx_mps") or 0.0
@@ -473,6 +554,7 @@ class Autopilot:
                 "flight_fraction": group.get("flight_fraction"),
             }
             self.state["stall"] = 0
+            self.state["rollback_streak"] = 0
             self.event("new_best_isaac", round=n, speed=speed, vx=vx, flight=group.get("flight_fraction"))
             if (keep / "policy").exists():
                 # Held-out MuJoCo check of every new best: 10 new seeds, 60 s hold (background, CPU).
@@ -490,9 +572,22 @@ class Autopilot:
             self.state["latest_ckpt"] = ckpt
             return
         self.state["stall"] += 1
+        cooldown = self.state.get("rollback_cooldown", 0)
         if best["speed"] >= 1.5 and speed < best["speed"] - 1.0:
-            self.rollback(f"regression {speed} < best {best['speed']} - 1.0")
-            return
+            if cooldown > 0:
+                self.state["rollback_cooldown"] = cooldown - 1
+            elif self.state.get("rollback_streak", 0) >= 2:
+                # Repeated rollbacks to the same best (the old run looped ~160 times): keep training forward.
+                self.state["rollback_streak"] = 0
+                self.state["rollback_cooldown"] = 4
+                self.event("rollback_suppressed", round=n, speed=speed, best=best["speed"], cooldown_rounds=4)
+            else:
+                self.state["rollback_streak"] = self.state.get("rollback_streak", 0) + 1
+                self.rollback(f"regression {speed} < best {best['speed']} - 1.0")
+                return
+        else:
+            self.state["rollback_streak"] = 0
+            self.state["rollback_cooldown"] = max(0, cooldown - 1)
         self.state["latest_ckpt"] = ckpt
         if self.state["stall"] >= self.args.stall_rounds:
             self.apply_knob()
@@ -591,12 +686,17 @@ class Autopilot:
             f" · Kết thúc: {s.get('finished', 'đang chạy')}",
             "",
             "Số đo Isaac là trên simulator dùng để train (PhysX). MuJoCo là simulator độc lập để kiểm chứng.",
-            "Tốc độ đạt = sống ≥ 90% và vx trung bình ≥ 85% lệnh trong 10 s giữ (Isaac); MuJoCo: tất cả seed qua",
+            "Cả hai dùng chung bảng thông số động cơ (g1lab.actuator_spec): đường cong mô-men-tốc độ Unitree, giới hạn",
+            "chặt nhất giữa các nguồn, không khớp nào vượt tốc độ định mức. Train có domain randomization; đánh giá ở",
+            "điều kiện danh định, giữ hướng (gain 1, ±0,2 rad/s).",
+            "Isaac đạt = sống ≥ 90%, vx ≥ 85% lệnh, RMS quay < 0,25 rad/s, lệch hướng < 30° (2 seed × 32 robot, lấy kém hơn); MuJoCo: mọi seed qua",
             "tiêu chí cũ (không ngã, vx ≥ 85%, RMSE, quay, hướng, dừng). Giới hạn vật lý không bị thay đổi.",
             "",
             f"**Tốt nhất (Isaac):** {s['best_isaac']}",
             "",
             f"**Tốt nhất (MuJoCo, 2 seed, giữ 20 s):** {s['best_mujoco']}",
+            "",
+            f"**Năng lực tốc độ cao nhất (Isaac, chỉ xét tốc độ, đúng thông số):** {s.get('best_capability')}",
             "",
         ]
         if "final_isaac_ladder" in s:
@@ -616,20 +716,22 @@ class Autopilot:
                 "",
             ]
         lines += [
-            "| Vòng | Phút | Level curriculum | LR | Isaac max (m/s) | vx max | Bay ở max | MuJoCo max | Ghi chú |",
-            "|---|---|---|---|---|---|---|---|---|",
+            "| Vòng | Phút | Level curriculum | LR | Isaac đạt đủ tiêu chí (m/s) | Isaac chỉ xét tốc độ | RMS quay ở mức đó |"
+            " Bay ở mức đó | MuJoCo đạt (spec) | Ghi chú |",
+            "|---|---|---|---|---|---|---|---|---|---|",
         ]
         for r in s["rounds"]:
             ev = r.get("isaac_eval") or {}
             mx = ev.get("max_sustained_speed_mps")
-            flight = None
+            cap = ev.get("max_speed_ignoring_yaw_mps")
+            flight = yaw = None
             for g in ev.get("groups", []):
-                if g["speed_cmd_mps"] == mx:
-                    flight = g.get("flight_fraction")
+                if g["speed_cmd_mps"] == (cap or mx):
+                    flight, yaw = g.get("flight_fraction"), g.get("yaw_rate_rms")
             note = "" if r["train"]["returncode"] == 0 else f"train rc={r['train']['returncode']}"
             lines.append(
                 f"| {r['round']} | {r['train_minutes']:.0f} | {r['level_in']:.1f}→{r.get('level_out', r['level_in']):.1f} | "
-                f"{r['lr']:.1e} | {mx} | {ev.get('max_mean_vx_mps') and round(ev['max_mean_vx_mps'], 2)} | "
+                f"{r['lr']:.1e} | {mx} | {cap} | {yaw if yaw is None else round(yaw, 2)} | "
                 f"{flight if flight is None else round(flight, 3)} | {r.get('mujoco_max_passed_mps')} | {note} |"
             )
         lines += ["", "## Sự kiện", ""] + [
