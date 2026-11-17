@@ -25,7 +25,7 @@ Video cạnh nhau (trái baseline, phải dự án): [1,5](docs/media/baseline-v
 [docs/G1_SPRINT_REPORT.md](docs/G1_SPRINT_REPORT.md).
 
 Chưa đạt: tiếp đất bằng gót (yêu cầu mũi chân), chưa đánh tay, dáng còn khuỵu, nhịp bước chưa tăng theo tốc độ.
-Train tiếp từ policy này đang bị sụp trong vài trăm iteration đầu; nguyên nhân đang được tách bằng thí nghiệm.
+Train tiếp từ policy này với critic warm-up + lr 5e-4 bị sụp trong vài trăm iteration đầu (với cả reward v2 và v3); đang xác nhận cấu hình fine-tune ổn định.
 11 m/s là trần nghiên cứu, **không phải cam kết** (bài báo SPRINT công bố ~6 m/s trên G1). Giới hạn mô-men, tốc
 độ khớp, gain PD và mô hình robot không bị nới để làm đẹp kết quả.
 

@@ -314,7 +314,7 @@ rollback theo tốc độ "chỉ xét tốc độ", mốc rollback là policy đ
 |---|---|---|
 | Nút chỉnh dùng khoá reward v1 (`swing_air_time`) đã xoá | Isaac thoát sau 6 s, 2 314 lần thử lại trong 4 giờ | Lỗi khởi động ⇒ gỡ nút chỉnh, chờ tăng dần, dừng sau 5 lần; test khoá reward của mọi nút chỉnh |
 | Rollback về bản "tốt nhất" Isaac khi bản đó đã ở giữa đợt sụp | Không thoát được đợt sụp | Mốc = policy đã kiểm chứng MuJoCo |
-| Lượt v3 (17/11) sụp ngay vòng 1 (ngã 2 % → 98 %), autopilot lấy bản 0 m/s làm mốc, hạ curriculum về 0,5 m/s | Mất ~2,5 giờ | Policy khởi tạo đã kiểm chứng là mốc (`--init-validated-speed`); về 0 m/s ⇒ rollback ngay; std âm = phân kỳ |
+| Lượt v3 (17/11) sụp ngay vòng 1 (ngã 2 % → 98 %), autopilot lấy bản 0 m/s làm mốc, hạ curriculum về 0,5 m/s | Mất ~2,5 giờ | Policy khởi tạo đã kiểm chứng là mốc (`--init-validated-speed`); về 0 m/s ⇒ rollback ngay; std âm = phân kỳ. Nguyên nhân sụp: quy trình fine-tune (warm-up/lr), không phải reward v3 — xem mục 9 |
 | Lượt đầu (13–16/11) lặp rollback ~2 ngày, một tiến trình Isaac bỏ qua SIGTERM chạy mồ côi 15 giờ | | Cooldown rollback, SIGKILL cả nhóm |
 | Isaac `train.py` bỏ qua `--experiment_name` | resume sai checkpoint | Hydra override `agent.experiment_name` |
 | Cảm biến tiếp xúc chỉ cho lực pháp tuyến | không đo được lực đẩy ngang | Σ mᵢaᵢ |
@@ -348,8 +348,11 @@ rollback theo tốc độ "chỉ xét tốc độ", mốc rollback là policy đ
 3. **Dáng khuỵu, nhịp bước không tăng**: tốc độ tăng nhờ sải dài; cadence 3,9 → 4,1 bước/s.
 4. **Còn thưởng gốc không gắn với tốc độ**: `feet_clearance` (+1) và `track_ang_vel_z` (+0,5) của Unitree trả đủ
    cả khi dậm chân tại chỗ (policy vòng 30 nhận 1,6/bước từ `feet_clearance`).
-5. **Fine-tune từ vòng 11 chưa ổn định**: lượt v3 sụp trong 250 iteration đầu; nguyên nhân (reward v3, LR hay
-   critic warm-up) đang được tách bằng thí nghiệm A/B.
+5. **Fine-tune từ vòng 11 chưa ổn định**: lượt v3 sụp trong 250 iteration đầu. Thí nghiệm A/B (cùng
+   checkpoint, cùng lr 5e-4 + critic warm-up 20 iteration, chỉ khác reward) cho thấy **reward v2 cũng sụp
+   như v3** (ngã 1–3 % → 54–56 % sau 150 iteration, std hành động 0,62 → 0,76), nên nguyên nhân là quy trình
+   fine-tune chứ không phải reward v3. Vòng 12 của lượt v2 (lr 1e-3, không warm-up) từ cùng checkpoint thì ổn
+   định (ngã ~1 %). Đang xác nhận bằng thí nghiệm C/D (lr 1e-3, không warm-up; reward v2 và v3).
 6. **Chỉ mô-men đỉnh**: chưa mô hình mô-men liên tục, nhiệt động cơ, công suất pin; giữ 60 s gần đỉnh mô-men
    có thể quá nhiệt trên robot thật.
 7. **MuJoCo danh định**: chưa chấm có đẩy, DR, mặt đất trơn; chưa có thử nghiệm robot thật.
@@ -359,7 +362,7 @@ rollback theo tốc độ "chỉ xét tốc độ", mốc rollback là policy đ
 
 | Ưu tiên | Việc | Mục tiêu |
 |---|---|---|
-| P0 | Kết luận A/B, fine-tune ổn định từ vòng 11 | Không sụp trong 3 vòng đầu |
+| P0 | Chốt cấu hình fine-tune (C/D: lr 1e-3, không warm-up), train tiếp từ vòng 11 | Không sụp trong 3 vòng đầu |
 | P0 | Gắn `feet_clearance`, `track_ang_vel_z` với `_earned` hoặc cổng tốc độ | Bịt kẽ hở reward còn lại |
 | P1 | Tăng `midfoot_landing`, thưởng mũi chân theo tốc độ | Tiếp đất mũi ≥ 50 % ở ≥ 4 m/s |
 | P1 | Thưởng đánh tay tương quan ngược với hông cùng bên | Đánh tay thay vì giơ tay |
