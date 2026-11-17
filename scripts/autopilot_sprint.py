@@ -7,6 +7,9 @@ carrying the speed-curriculum level over, then evaluates the final checkpoint on
 * best = highest Isaac max sustained speed (survival >= 90 %, mean vx >= 85 % of command, 10 s hold);
 * regression (NaN, failed run, or max speed more than 1 m/s below best) -> roll back to best, halve LR;
 * stall (no improvement for `stall_rounds`) -> apply the next knob from a fixed, logged list;
+* a run that dies before its first iteration is a launch/config error, not a training regression: a rejected
+  Hydra override reverts the knob that introduced it; otherwise retry with growing back-off and halt after
+  `max_startup_failures` in a row (never loop on the same crash);
 * safety: every Isaac/MuJoCo child runs without network (unshare -rn) and with CUDA pinned to GPU1; a guard
   stops everything if a process of this project ever appears on GPU0.
 
@@ -42,7 +45,8 @@ KNOBS = [
     },
     {
         "name": "flight_weights_up",
-        "overrides": {"env.rewards.flight_phase.weight": 4.0, "env.rewards.swing_air_time.weight": 3.0},
+        # reward v2 terms only (v1's swing_air_time no longer exists; Hydra rejects unknown keys)
+        "overrides": {"env.rewards.flight_phase.weight": 1.5, "env.rewards.accel_push_off.weight": 2.0},
     },
     {"name": "lr_reset_3e-4", "lr": 3.0e-4},
 ]
@@ -65,7 +69,10 @@ class Autopilot:
                 "started": datetime.now().isoformat(timespec="seconds"),
                 "deadline": time.time() + args.hours * 3600 if args.hours > 0 else None,
                 "round": 0,
-                "latest_ckpt": str(Path(args.init_checkpoint).resolve()),
+                # "scratch": random initialisation (no checkpoint) for the first round.
+                "latest_ckpt": None
+                if args.init_checkpoint == "scratch"
+                else str(Path(args.init_checkpoint).resolve()),
                 "level": args.start_level,
                 "lr": args.lr,
                 "knobs_applied": [],
@@ -201,15 +208,15 @@ class Autopilot:
             a.round_iterations,
             "--seed",
             a.seed + round_no,
-            "--checkpoint",
-            self.state["latest_ckpt"],
             "--learning-rate",
             self.state["lr"],
             "--output",
             round_dir / "train",
             "--execute",
         ]
-        if round_no == 1 and a.critic_warmup:
+        if self.state["latest_ckpt"]:
+            argv += ["--checkpoint", self.state["latest_ckpt"]]
+        if round_no == 1 and a.critic_warmup and self.state["latest_ckpt"]:
             argv += ["--critic-warmup", a.critic_warmup]
         for key, value in overrides.items():
             argv.append(f"--train-arg={key}={value}")
@@ -457,6 +464,14 @@ class Autopilot:
             if self.stop.is_set():
                 break
             ok = train["returncode"] == 0 and train["checkpoint"] and not train["nan"]
+            if not ok and train["iterations_logged"] == 0:
+                self.state["rounds"].append(entry)
+                if not self.startup_failure(n, round_dir):
+                    self.save()
+                    break
+                self.save()
+                continue
+            self.state["startup_failures"] = 0
             if not ok:
                 self.state["consecutive_failures"] += 1
                 self.event(
@@ -607,7 +622,7 @@ class Autopilot:
 
     def rollback(self, reason):
         best = self.state["best_isaac"]
-        target = best["ckpt"] if best else str(Path(self.args.init_checkpoint).resolve())
+        target = best["ckpt"] if best else self.state["latest_ckpt"]  # never roll back to a random policy
         self.state["latest_ckpt"] = target
         self.state["lr"] = max(self.state["lr"] * 0.5, 1.0e-5)
         if best:
@@ -615,12 +630,54 @@ class Autopilot:
         self.state["consecutive_failures"] = 0
         self.event("rollback", reason=reason, to=target, lr=self.state["lr"], level=self.state["level"])
 
+    def startup_failure(self, n, round_dir):
+        """Run died before training started. Returns False when the loop must halt."""
+        log = round_dir / "train" / "train.log"
+        text = log.read_text(errors="ignore") if log.exists() else ""
+        bad_keys = re.findall(r"Could not override '([^']+)'", text)
+        self.state["startup_failures"] = self.state.get("startup_failures", 0) + 1
+        self.event("startup_failure", round=n, count=self.state["startup_failures"], rejected_keys=bad_keys)
+        if bad_keys and self.revert_last_knob(bad_keys):
+            return True
+        if self.state["startup_failures"] >= self.args.max_startup_failures:
+            self.event("halted", reason="repeated_startup_failures", count=self.state["startup_failures"])
+            return False
+        wait = min(1800, 60 * 2 ** (self.state["startup_failures"] - 1))
+        self.log(f"startup failure; retrying in {wait}s")
+        self.stop.wait(wait)
+        return True
+
+    def revert_last_knob(self, bad_keys):
+        """Undo the most recent knob if it introduced a rejected override (restores previous values)."""
+        last = self.state.get("last_knob")
+        if not last or not set(bad_keys) & set(last["previous"]):
+            for key in bad_keys:  # an override not from a knob (e.g. --override): drop it, it can never work
+                self.state["overrides"].pop(key, None)
+            self.event("override_dropped", keys=bad_keys)
+            return bool(bad_keys)
+        for key, old in last["previous"].items():
+            if old is None:
+                self.state["overrides"].pop(key, None)
+            else:
+                self.state["overrides"][key] = old
+        if last.get("lr_before") is not None:
+            self.state["lr"] = last["lr_before"]
+        self.state["last_knob"] = None
+        self.event("knob_reverted", knob=last["name"], rejected_keys=bad_keys)
+        return True
+
     def apply_knob(self):
         done = {k for k in self.state["knobs_applied"]}
         for knob in KNOBS:
             if knob["name"] in done:
                 continue
-            self.state["overrides"].update({k: v for k, v in knob.get("overrides", {}).items()})
+            overrides = knob.get("overrides", {})
+            self.state["last_knob"] = {
+                "name": knob["name"],
+                "previous": {k: self.state["overrides"].get(k) for k in overrides},
+                "lr_before": self.state["lr"] if "lr" in knob else None,
+            }
+            self.state["overrides"].update(dict(overrides))
             if "lr" in knob:
                 self.state["lr"] = knob["lr"]
             self.state["knobs_applied"].append(knob["name"])
@@ -759,6 +816,7 @@ def main():
     parser.add_argument("--stall-rounds", type=int, default=3)
     parser.add_argument("--mujoco-workers", type=int, default=4)
     parser.add_argument("--min-free-gb", type=float, default=50.0)
+    parser.add_argument("--max-startup-failures", type=int, default=5)
     parser.add_argument(
         "--override",
         action="append",
