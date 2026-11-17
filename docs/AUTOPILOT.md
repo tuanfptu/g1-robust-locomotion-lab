@@ -1,6 +1,23 @@
 # Autopilot sprint (chạy qua đêm, không cần mạng)
 
-Lượt hiện tại: `artifacts/autopilot-spec2-20261116/` (bắt đầu 16/11/2026 10:07, **không hạn chót**), xuất phát từ
+## Lượt `autopilot-v2-scratch-20261116` (train từ đầu, reward v2 → v3 từ 17/11)
+
+- **Tốt nhất (vòng 11), MuJoCo 10 seed × 60 s:** lệnh 5,5 m/s → thực 4,94 m/s, 10/10, pha bay 46 %, chạm đất
+  0,13 s, khớp ≤ 72 % tốc độ định mức, dừng hẳn sau giảm tốc. Còn tiếp đất gót 100 %.
+- **Sự cố 1 — sụp tốc độ (vòng 18–30):** nút chỉnh `yaw_tracking_1.0` nhân đôi thưởng giữ hướng; các thưởng dáng
+  chạy chỉ xét *tốc độ lệnh* nên vẫn trả đủ khi robot chạy chậm hơn lệnh. Policy bỏ lệnh nhanh, chạy thẳng ~2 m/s
+  (thưởng bám tốc độ 1,12 → 0,41, thưởng giữ hướng 0,79 → 1,56). Tiêu chí Isaac có xét quay nên không phát hiện.
+- **Sự cố 2 — lặp lỗi khởi động (04:19–08:12 ngày 17/11):** nút `flight_weights_up` dùng khóa reward v1
+  `swing_air_time` không còn tồn tại → Isaac thoát sau 6 s, autopilot thử lại 2314 lần.
+- **Sửa (reward v3 + autopilot):** thưởng dáng chạy dương nhân với chất lượng bám tốc độ (`_earned` trong
+  [isaac_sprint.py](../src/g1lab/isaac_sprint.py); phạt không bị giảm); bỏ nút tăng thưởng quay; rollback về bản có
+  kiểm chứng MuJoCo khi tốc độ (chỉ xét tốc độ) tụt ≥ 1,5 m/s hai vòng liền; lỗi khởi động → gỡ nút chỉnh hỏng,
+  chờ tăng dần, dừng sau 5 lần. Khởi động lại từ vòng 11, lr 5e-4, critic warm-up. Bản lưu trạng thái cũ:
+  `state.before-*.json`.
+
+## Lượt cũ
+
+Lượt hiện tại khi đó: `artifacts/autopilot-spec2-20261116/` (bắt đầu 16/11/2026 10:07, **không hạn chót**), xuất phát từ
 bản tốt nhất của lượt trước (`checkpoints/round7-best/model.pt`), dải tốc độ khởi đầu 3,0 m/s, entropy 0,001.
 
 `autopilot-spec-20261116/` (09:34–09:53) bị dừng: phạt bình phương sai lệch quay khiến policy học cách ngã sớm

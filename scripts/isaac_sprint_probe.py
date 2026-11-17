@@ -114,6 +114,7 @@ def main():
         "double": 0.0,
         "push_bw": 0.0,
         "pitch_deg": 0.0,
+        "vx": 0.0,
         "knee_drop_swing_m": 0.0,
         "n": 0,
         "ns": 0,
@@ -150,11 +151,10 @@ def main():
             a = alive
             acc["flight"] += (~contact).all(dim=1)[a].float().sum().item()
             acc["double"] += contact.all(dim=1)[a].float().sum().item()
-            acc["push_bw"] += (
-                sp.push_off_force(base, "base_velocity", feet_s, SceneEntityCfg("robot"), -2.0, -1.0)[a]
-                .sum()
-                .item()
-            )
+            stance = contact.any(dim=1)
+            push = torch.clamp(sp._forward_ground_force(base, SceneEntityCfg("robot")), min=0.0) * stance
+            acc["push_bw"] += push[a].sum().item()
+            acc["vx"] += robot.data.root_lin_vel_b[:, 0][a].sum().item()
             acc["pitch_deg"] += torch.rad2deg(sp.torso_pitch(base, torso)[0])[a].sum().item()
             drop = robot.data.root_pos_w[:, 2:3] - robot.data.body_pos_w[:, knees.body_ids, 2]
             swing = ~contact & a.unsqueeze(1)
@@ -178,6 +178,7 @@ def main():
         "speed_target": args.speed,
         "survival": alive.float().mean().item(),
         "standing": standing,
+        "mean_vx_mps": acc["vx"] / n,
         "flight_fraction": acc["flight"] / n,
         "double_support_fraction": acc["double"] / n,
         "mean_forward_push_bodyweights": acc["push_bw"] / n,

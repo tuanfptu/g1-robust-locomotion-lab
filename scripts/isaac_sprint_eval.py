@@ -129,6 +129,11 @@ def main():
         "stance",
         "lift",
         "air",
+        "lz2",
+        "ahead",
+        "lateral",
+        "alt",
+        "steps",
     ]
     acc = {k: torch.zeros(n, device=base.device) for k in keys}
     steps = int(round(duration / base.step_dt))
@@ -158,6 +163,11 @@ def main():
             acc["lift"] += lift.sum(dim=1)
             acc["stance"] += (g.last_stance * lift).sum(dim=1)
             acc["air"] += (g.last_air * touch).sum(dim=1)
+            acc["lz2"] += sp.vertical_angular_momentum_per_mass(base) ** 2 * w
+            acc["ahead"] += (g.landing_ahead * touch).sum(dim=1)
+            acc["lateral"] += (g.landing_lateral * touch).sum(dim=1)
+            acc["alt"] += g.alternated.float() * w
+            acc["steps"] += g.any_touchdown.float() * w
     groups = []
     for i, v in enumerate(speeds):
         sl = slice(i * per, (i + 1) * per)
@@ -192,6 +202,10 @@ def main():
                     else None
                 ),
                 "mean_torso_pitch_deg": m("pitch"),
+                "angular_momentum_z_rms_per_mass": m("lz2") ** 0.5 if k else None,
+                "mean_touchdown_ahead_m": m("ahead", "touch"),
+                "mean_touchdown_lateral_m": m("lateral", "touch"),
+                "alternating_step_fraction": m("alt", "steps"),
                 "max_heading_deg": float(torch.rad2deg(heading_max[sl][ok]).max()) if k else None,
             }
         )

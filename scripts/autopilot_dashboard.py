@@ -64,7 +64,11 @@ def gpu_status():
 
 
 def current_training(run, rounds_done):
-    dirs = sorted(Path(run).glob("round_*"))
+    # numeric order: "round_999" sorts after "round_2345" as text
+    dirs = sorted(
+        (d for d in Path(run).glob("round_*") if d.name.split("_")[1].isdigit()),
+        key=lambda d: int(d.name.split("_")[1]),
+    )
     if not dirs:
         return None
     log = dirs[-1] / "train" / "train.log"

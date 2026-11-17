@@ -6,6 +6,8 @@ carrying the speed-curriculum level over, then evaluates the final checkpoint on
 
 * best = highest Isaac max sustained speed (survival >= 90 %, mean vx >= 85 % of command, 10 s hold);
 * regression (NaN, failed run, or max speed more than 1 m/s below best) -> roll back to best, halve LR;
+* capability collapse (speed-only top speed >= `capability_drop` m/s below its best for 2 rounds in a row, which
+  the yaw-inclusive metric does not see) -> roll back to the anchor = MuJoCo-validated best, if any;
 * stall (no improvement for `stall_rounds`) -> apply the next knob from a fixed, logged list;
 * a run that dies before its first iteration is a launch/config error, not a training regression: a rejected
   Hydra override reverts the knob that introduced it; otherwise retry with growing back-off and halt after
@@ -32,10 +34,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = ROOT.parents[1]
 GPU0_UUID = "GPU-4bb4ac0c-5f15-959c-dc6e-d6b9632cd45f"
+# Knobs never raise heading/twist bonuses: in run 2026-11-16 doubling track_ang_vel_z made jogging straight pay more
+# than running fast (rounds 18-30, top speed 5.4 -> 2.0 m/s). Speed tracking stays the dominant term.
 KNOBS = [
-    {"name": "yaw_tracking_run_2.0", "overrides": {"env.rewards.run_yaw_tracking.weight": 2.0}},
-    {"name": "yaw_tracking_1.0", "overrides": {"env.rewards.track_ang_vel_z.weight": 1.0}},
-    {"name": "track_weight_1.5", "overrides": {"env.rewards.track_lin_vel_xy.weight": 1.5}},
+    {"name": "track_weight_2.5", "overrides": {"env.rewards.track_lin_vel_xy.weight": 2.5}},
     {
         "name": "accel_3.0",
         "overrides": {
@@ -216,7 +218,8 @@ class Autopilot:
         ]
         if self.state["latest_ckpt"]:
             argv += ["--checkpoint", self.state["latest_ckpt"]]
-        if round_no == 1 and a.critic_warmup and self.state["latest_ckpt"]:
+        warm = round_no == 1 or self.state.pop("critic_warmup_next", False)  # e.g. after a reward change
+        if warm and a.critic_warmup and self.state["latest_ckpt"]:
             argv += ["--critic-warmup", a.critic_warmup]
         for key, value in overrides.items():
             argv.append(f"--train-arg={key}={value}")
@@ -544,7 +547,20 @@ class Autopilot:
             self.event("new_best_capability", round=n, speed=cap, yaw=group.get("yaw_rate_rms"))
 
     def decide(self, n, ckpt, ev, bundle):
+        prev_cap = (self.state.get("best_capability") or {}).get("speed", 0.0)
         self.keep_capability(n, ckpt, ev, bundle)
+        cap = ev.get("max_speed_ignoring_yaw_mps", 0.0)
+        if prev_cap >= 3.0 and cap <= prev_cap - self.args.capability_drop:
+            self.state["capability_drop_rounds"] = self.state.get("capability_drop_rounds", 0) + 1
+        else:
+            self.state["capability_drop_rounds"] = 0
+        if self.state["capability_drop_rounds"] >= 2:
+            self.state["capability_drop_rounds"] = 0
+            self.state["capability_rollbacks"] = self.state.get("capability_rollbacks", 0) + 1
+            self.rollback(f"capability collapse {cap} <= best {prev_cap} - {self.args.capability_drop}")
+            if self.state["capability_rollbacks"] % 2 == 0:
+                self.apply_knob()  # the same recipe collapsed twice from the anchor: change something
+            return
         speed = ev["max_sustained_speed_mps"]
         group = next((g for g in ev["groups"] if g["speed_cmd_mps"] == speed), {})
         vx = group.get("mean_vx_mps") or 0.0
@@ -620,13 +636,25 @@ class Autopilot:
             self.state["level"] = min(self.args.speed_limit, self.state["level"] + 0.5)
             self.event("curriculum_push", level=self.state["level"], max_sustained=max_speed)
 
-    def rollback(self, reason):
+    def anchor(self):
+        """(checkpoint, speed) to roll back to: the MuJoCo-validated best if known, else the Isaac best."""
+        mj = self.state.get("best_mujoco")
+        if mj and mj.get("speed", 0) > 0:
+            entry = next((r for r in self.state["rounds"] if r["round"] == mj["round"]), None)
+            ckpt = entry and entry["train"].get("checkpoint")
+            if ckpt and Path(ckpt).exists():
+                return ckpt, mj.get("validation_10seeds_60s_max_passed_mps") or mj["speed"]
         best = self.state["best_isaac"]
-        target = best["ckpt"] if best else self.state["latest_ckpt"]  # never roll back to a random policy
+        if best:
+            return best["ckpt"], best["speed"]
+        return self.state["latest_ckpt"], None  # never roll back to a random policy
+
+    def rollback(self, reason):
+        target, speed = self.anchor()
         self.state["latest_ckpt"] = target
         self.state["lr"] = max(self.state["lr"] * 0.5, 1.0e-5)
-        if best:
-            self.state["level"] = min(self.state["level"], best["speed"] + 0.5)
+        if speed is not None:
+            self.state["level"] = min(self.state["level"], speed + 0.5)
         self.state["consecutive_failures"] = 0
         self.event("rollback", reason=reason, to=target, lr=self.state["lr"], level=self.state["level"])
 
@@ -817,6 +845,7 @@ def main():
     parser.add_argument("--mujoco-workers", type=int, default=4)
     parser.add_argument("--min-free-gb", type=float, default=50.0)
     parser.add_argument("--max-startup-failures", type=int, default=5)
+    parser.add_argument("--capability-drop", type=float, default=1.5)
     parser.add_argument(
         "--override",
         action="append",

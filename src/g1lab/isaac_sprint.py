@@ -1,18 +1,23 @@
-"""G1 sprint task: flight-phase running on top of the v0-gain velocity task. Import only inside Isaac Sim.
+"""G1 sprint task (reward design v2): flight-phase running within the actuator spec. Import only inside Isaac Sim.
 
-Design (all numbers are initial hypotheses to be tuned by ablation, not validated settings):
+Design principles (hypotheses, to be checked by ablation and the MuJoCo benchmark):
 
-* Speed gate s(v_cmd) = clip((v_cmd - v0) / (v1 - v0), 0, 1). Below v0 the reward equals the walking reward
-  the public ONNX actor was trained with (so a transplanted actor is not disturbed); above v1 the walking-only
-  terms are switched off and sprint terms are fully on.
-* Sprint terms use contact-sensor events instead of a gait clock, because the policy does not observe a clock:
-  flight phase, no double support, short stance, long swing, forward push-off force, forefoot touchdown,
-  knee lift, ankle dorsiflexion in swing, contralateral arm swing, and a staged forward lean that grows with
-  commanded speed and acceleration.
-* The command ramps toward its sampled target with acceleration/deceleration limits, so acceleration,
-  constant-speed and braking/stop phases all occur during training.
-* Actuator limits, PD gains, observation and action spaces are unchanged (480 -> 29), so the public ONNX
-  actor can still be transplanted exactly.
+* Speed comes from **step frequency** with a moderate step length, not from long hops: a cadence target that rises
+  with speed replaces "maximise air time"; a flight phase must exist (small bonus, no double support) but is not
+  maximised.
+* Feet land close under the centre of mass with little forward foot speed (less braking); propulsion is rewarded
+  only while accelerating, braking force is penalised at constant speed.
+* Mid/forefoot landing (not heel); ankle dorsiflexed and thigh raised in swing.
+* Body twisting is attacked at its source: whole-body angular momentum about the vertical axis, narrow step width,
+  and a bounded heading-tracking bonus.
+* Forward lean follows commanded acceleration (atan(a/g) + 4 deg), not speed.
+* Stay inside the actuator envelope (g1lab.actuator_spec): penalties for torque clipping and joint speed above 90 %
+  of the rated speed.
+* All running terms are gated by command speed s(v) = clip((v - 1.6) / 0.6, 0, 1); below that the vendor walking
+  reward applies. Bonuses are bounded and non-negative, and falling costs -200, so ending an episode early is never
+  a way to escape penalties.
+* The command ramps with bounded acceleration and holds a sampled heading, so acceleration, cruise, braking and stop
+  all occur in training.
 """
 
 import math
@@ -50,6 +55,10 @@ GATE = {"v0": 1.6, "v1": 2.2}
 FEET_SENSOR = "feet_contact"
 FEET_FORCE_THRESHOLD_N = 20.0
 RELEASE_STEPS = 2  # 40 ms without contact before a lift-off is declared
+# m^2/s. Probe of the previous best policy (Isaac, 1-5 m/s): whole-body L_z/m RMS 0.021-0.027 even while the pelvis
+# yaw-rate RMS was 0.8-1.1 rad/s, i.e. the pelvis counter-rotates against the legs; pelvis yaw is handled by
+# run_yaw_tracking, this term only keeps whole-body twist small.
+LOW_TWIST_STD = 0.02
 
 
 # ----------------------------------------------------------------------------------------------- command
@@ -104,13 +113,30 @@ def _gate(env, command_name, v0, v1):
     return torch.clamp((v - v0) / (v1 - v0), 0.0, 1.0)
 
 
+EARNED_STD = (0.5, 0.15)  # same tolerance as the speed-tracking reward
+
+
+def _earned(env, command_name):
+    """Speed-tracking quality in [0, 1] (same kernel as track_lin_vel_scaled).
+
+    Positive running-style bonuses are paid only in proportion to it. Without this, the policy of run 2026-11-16
+    learned to ignore fast commands and jog straight at ~2 m/s: heading/twist/knee bonuses were gated by the
+    *commanded* speed only, so they paid in full while running far slower than asked (rounds 18-30: speed
+    tracking reward 1.12 -> 0.41 while yaw bonuses 0.79 -> 1.56 and the Isaac top speed fell 5.4 -> 2.0 m/s).
+    Penalties are not scaled, so slowing down never makes them cheaper.
+    """
+    return track_lin_vel_scaled(env, command_name, *EARNED_STD)
+
+
 class GaitTracker:
-    """Debounced per-foot stance/swing state, updated once per control step.
+    """Debounced per-foot stance/swing state and touchdown kinematics, updated once per control step.
 
     Touchdown is immediate (force above threshold in any physics substep of the step); lift-off is declared only
     after `RELEASE_STEPS` consecutive steps without contact, so grazing/rolling contacts do not split a stance.
-    Durations are corrected for that delay. The landing posture (heel height minus toe height) is taken from the
-    step before touchdown, i.e. how the foot approaches the ground.
+    At each touchdown it records: the landing posture (heel minus toe height, taken one step before contact), the
+    step time since the previous touchdown of either foot and whether feet alternated, the foot position relative
+    to the whole-body centre of mass in the heading frame (ahead / lateral), and the forward foot speed just before
+    contact.
     """
 
     def __init__(self, env, sensor_cfg, foot_cfg):
@@ -129,6 +155,15 @@ class GaitTracker:
         self.last_air = torch.zeros(n, k, device=dev)
         self.prev_drop = torch.zeros(n, k, device=dev)
         self.landing_drop = torch.zeros(n, k, device=dev)
+        self.prev_foot_vx = torch.zeros(n, k, device=dev)
+        self.landing_foot_vx = torch.zeros(n, k, device=dev)
+        self.landing_ahead = torch.zeros(n, k, device=dev)
+        self.landing_lateral = torch.zeros(n, k, device=dev)
+        self.since_touchdown = torch.zeros(n, device=dev)
+        self.step_time = torch.zeros(n, device=dev)
+        self.last_foot = torch.full((n,), -1, dtype=torch.long, device=dev)
+        self.alternated = torch.zeros(n, dtype=torch.bool, device=dev)
+        self.any_touchdown = torch.zeros(n, dtype=torch.bool, device=dev)
 
     def update(self, env):
         if self.step == env.common_step_counter:
@@ -141,6 +176,11 @@ class GaitTracker:
             _foot_points(env, self.foot_cfg, HEEL_LOCAL)[..., 2]
             - _foot_points(env, self.foot_cfg, TOE_LOCAL)[..., 2]
         )
+        robot = env.scene[self.foot_cfg.name]
+        heading = yaw_quat(robot.data.root_quat_w).unsqueeze(1).expand(-1, drop.shape[1], -1)
+        com = _com(env)
+        rel = quat_apply_inverse(heading, robot.data.body_pos_w[:, self.foot_cfg.body_ids] - com.unsqueeze(1))
+        foot_v = quat_apply_inverse(heading, robot.data.body_lin_vel_w[:, self.foot_cfg.body_ids])
         dt = env.step_dt
         self.gap = torch.where(raw, torch.zeros_like(self.gap), self.gap + 1)
         contact = (self.contact | raw) & ~(self.contact & (self.gap >= RELEASE_STEPS))
@@ -151,16 +191,36 @@ class GaitTracker:
         self.last_stance = torch.where(self.liftoff, self.timer - delay, self.last_stance)
         self.last_air = torch.where(self.touchdown, self.timer, self.last_air)
         self.landing_drop = torch.where(self.touchdown, self.prev_drop, self.landing_drop)
+        self.landing_foot_vx = torch.where(self.touchdown, self.prev_foot_vx, self.landing_foot_vx)
+        self.landing_ahead = torch.where(self.touchdown, rel[..., 0], self.landing_ahead)
+        self.landing_lateral = torch.where(self.touchdown, rel[..., 1].abs(), self.landing_lateral)
         self.timer = torch.where(self.liftoff, torch.full_like(self.timer, delay), self.timer)
         self.timer = torch.where(self.touchdown, torch.zeros_like(self.timer), self.timer)
+        # step timing / alternation (one touchdown per step; if both land together count it as a non-alternation)
+        self.since_touchdown += dt
+        self.any_touchdown = self.touchdown.any(dim=1)
+        foot = torch.argmax(self.touchdown.float(), dim=1)
+        both = self.touchdown.all(dim=1)
+        self.alternated = self.any_touchdown & ~both & (self.last_foot >= 0) & (foot != self.last_foot)
+        self.step_time = torch.where(self.any_touchdown, self.since_touchdown, self.step_time)
+        self.since_touchdown = torch.where(
+            self.any_touchdown, torch.zeros_like(self.since_touchdown), self.since_touchdown
+        )
+        self.last_foot = torch.where(self.any_touchdown, foot, self.last_foot)
         self.contact = contact
         self.prev_drop = drop
-        fresh = (env.episode_length_buf <= 1).unsqueeze(1).expand_as(contact)
+        self.prev_foot_vx = foot_v[..., 0]
+        fresh_env = env.episode_length_buf <= 1
+        fresh = fresh_env.unsqueeze(1).expand_as(contact)
         self.contact = torch.where(fresh, raw, self.contact)
         for buf in (self.touchdown, self.liftoff):
             buf[fresh] = False
         self.timer[fresh] = 0.0
         self.gap[fresh] = 0
+        self.any_touchdown[fresh_env] = False
+        self.alternated[fresh_env] = False
+        self.last_foot[fresh_env] = -1
+        self.since_touchdown[fresh_env] = 0.0
         return self
 
 
@@ -184,6 +244,34 @@ def _body_masses(env, asset_cfg):
     return cache[asset_cfg.name]
 
 
+def _com(env, asset_name="robot"):
+    """Whole-body centre of mass in world frame (uses the possibly randomised masses)."""
+    masses = _body_masses(env, SceneEntityCfg(asset_name))
+    pos = env.scene[asset_name].data.body_com_pos_w
+    return torch.sum(masses.unsqueeze(-1) * pos, dim=1) / masses.sum(dim=1, keepdim=True)
+
+
+def vertical_angular_momentum_per_mass(env, asset_name="robot"):
+    """Whole-body angular momentum about the vertical axis through the CoM, divided by total mass (m^2/s).
+
+    Orbital part sum m_i ((p_i - c) x (v_i - v_c))_z plus an approximate spin part sum I_zz,i w_z,i (body-frame zz
+    inertia, ignoring off-diagonal terms) - enough to detect the body twisting that failed the yaw criterion.
+    """
+    asset = env.scene[asset_name]
+    masses = _body_masses(env, SceneEntityCfg(asset_name))
+    cache = env.__dict__.setdefault("_g1lab_inertia_zz", {})
+    if asset_name not in cache:
+        cache[asset_name] = asset.root_physx_view.get_inertias().to(env.device)[..., 8]
+    total = masses.sum(dim=1, keepdim=True)
+    pos, vel = asset.data.body_com_pos_w, asset.data.body_com_lin_vel_w
+    c = torch.sum(masses.unsqueeze(-1) * pos, dim=1, keepdim=True) / total.unsqueeze(-1)
+    vc = torch.sum(masses.unsqueeze(-1) * vel, dim=1, keepdim=True) / total.unsqueeze(-1)
+    r, v = pos - c, vel - vc
+    orbital = torch.sum(masses * (r[..., 0] * v[..., 1] - r[..., 1] * v[..., 0]), dim=1)
+    spin = torch.sum(cache[asset_name] * asset.data.body_ang_vel_w[..., 2], dim=1)
+    return (orbital + spin) / total.squeeze(1)
+
+
 def _foot_points(env, asset_cfg, local):
     asset = env.scene[asset_cfg.name]
     quat = asset.data.body_quat_w[:, asset_cfg.body_ids]
@@ -201,12 +289,43 @@ def torso_pitch(env, asset_cfg):
 
 
 # ------------------------------------------------------------------------------------------ sprint terms
+def track_lin_vel_scaled(env, command_name, base_std, rel_std, asset_cfg=SceneEntityCfg("robot")):
+    """exp(-|v_cmd - v|^2 / sigma^2) in the yaw frame with sigma = max(base_std, rel_std * |v_cmd|).
+
+    Same name/slot as the vendor term (the speed curriculum reads it); the tolerance grows with speed so a 5 % error
+    at 8 m/s is not treated like a 0.4 m/s error at walking speed.
+    """
+    asset = env.scene[asset_cfg.name]
+    vel = quat_apply_inverse(yaw_quat(asset.data.root_quat_w), asset.data.root_lin_vel_w[:, :3])
+    cmd = env.command_manager.get_command(command_name)
+    error = torch.sum(torch.square(cmd[:, :2] - vel[:, :2]), dim=1)
+    sigma = torch.clamp(rel_std * torch.norm(cmd[:, :2], dim=1), min=base_std)
+    return torch.exp(-error / sigma**2)
+
+
 def flight_phase(env, command_name, sensor_cfg, v0, v1):
-    return _gate(env, command_name, v0, v1) * (~_in_contact(env, sensor_cfg)).all(dim=1).float()
+    return (
+        _gate(env, command_name, v0, v1)
+        * _earned(env, command_name)
+        * (~_in_contact(env, sensor_cfg)).all(dim=1).float()
+    )
 
 
 def double_support(env, command_name, sensor_cfg, v0, v1):
     return _gate(env, command_name, v0, v1) * _in_contact(env, sensor_cfg).all(dim=1).float()
+
+
+def cadence_tracking(env, command_name, sensor_cfg, v0, v1, base, per_speed, low, high, std):
+    """At each alternating touchdown: exp(-((1/step_time - f*(v)) / std)^2), f* = clip(base + per_speed*v, low, high).
+
+    Rewards turnover instead of long aerial hops; a non-alternating touchdown (hop, both feet) earns nothing.
+    """
+    g = gait(env, sensor_cfg)
+    v = env.command_manager.get_command(command_name)[:, 0]
+    target = torch.clamp(base + per_speed * v, low, high)
+    freq = 1.0 / torch.clamp(g.step_time, min=1e-3)
+    score = torch.exp(-torch.square((freq - target) / std)) * g.alternated.float()
+    return _gate(env, command_name, v0, v1) * _earned(env, command_name) * score
 
 
 def stance_too_long(env, command_name, sensor_cfg, v0, v1, intercept, slope, minimum):
@@ -218,33 +337,61 @@ def stance_too_long(env, command_name, sensor_cfg, v0, v1, intercept, slope, min
     return _gate(env, command_name, v0, v1) * torch.sum(excess * g.liftoff.float(), dim=1)
 
 
-def swing_air_time(env, command_name, sensor_cfg, v0, v1, threshold, cap):
-    """At each touchdown: (air time - threshold), capped; negative for too-short swings."""
+def overstride(env, command_name, sensor_cfg, v0, v1, max_ahead, scale):
+    """At each touchdown: how far the foot lands beyond `max_ahead` in front of the CoM (braking), in units of scale."""
     g = gait(env, sensor_cfg)
-    air = torch.clamp(g.last_air, max=cap)
-    return _gate(env, command_name, v0, v1) * torch.sum((air - threshold) * g.touchdown.float(), dim=1)
+    excess = torch.clamp(g.landing_ahead - max_ahead, min=0.0) / scale
+    return _gate(env, command_name, v0, v1) * torch.sum(excess * g.touchdown.float(), dim=1)
 
 
-def push_off_force(env, command_name, sensor_cfg, asset_cfg, v0, v1):
-    """Forward ground force while a foot is on the ground, from Newton: F = sum_i m_i a_i (heading frame).
+def landing_foot_speed(env, command_name, sensor_cfg, v0, v1):
+    """At each touchdown: forward foot speed just before contact relative to the command speed (no 'pawing')."""
+    g = gait(env, sensor_cfg)
+    v = torch.clamp(env.command_manager.get_command(command_name)[:, 0], min=1.0).unsqueeze(1)
+    excess = torch.clamp(g.landing_foot_vx, min=0.0) / v
+    return _gate(env, command_name, v0, v1) * torch.sum(excess * g.touchdown.float(), dim=1)
 
-    Isaac's contact-sensor net force carries only the normal component, so horizontal ground reaction force is
-    reconstructed from body accelerations. Positive part only, in body weights.
-    """
+
+def wide_step(env, command_name, sensor_cfg, v0, v1, max_lateral, scale):
+    """At each touchdown: lateral foot distance from the CoM beyond `max_lateral` (wide steps create yaw torque)."""
+    g = gait(env, sensor_cfg)
+    excess = torch.clamp(g.landing_lateral - max_lateral, min=0.0) / scale
+    return _gate(env, command_name, v0, v1) * torch.sum(excess * g.touchdown.float(), dim=1)
+
+
+def _forward_ground_force(env, asset_cfg):
     asset = env.scene[asset_cfg.name]
     masses = _body_masses(env, asset_cfg)
     force_w = torch.sum(masses.unsqueeze(-1) * asset.data.body_lin_acc_w, dim=1)
-    heading = yaw_quat(asset.data.root_quat_w)
-    forward = quat_apply_inverse(heading, force_w)[:, 0]
+    forward = quat_apply_inverse(yaw_quat(asset.data.root_quat_w), force_w)[:, 0]
+    return forward / (masses.sum(dim=1) * 9.81)
+
+
+def accel_push_off(env, command_name, sensor_cfg, asset_cfg, v0, v1, accel_scale):
+    """Forward ground force (body weights, Newton: sum m_i a_i) during stance, only while the command accelerates."""
+    term = env.command_manager.get_term(command_name)
+    accelerating = torch.clamp(term.accel_x / accel_scale, 0.0, 1.0)
     stance = _in_contact(env, sensor_cfg).any(dim=1).float()
-    weight = masses.sum(dim=1) * 9.81
-    return _gate(env, command_name, v0, v1) * stance * torch.clamp(forward, min=0.0) / weight
+    push = torch.clamp(_forward_ground_force(env, asset_cfg), min=0.0)
+    return _gate(env, command_name, v0, v1) * _earned(env, command_name) * accelerating * stance * push
 
 
-def forefoot_touchdown(env, command_name, sensor_cfg, asset_cfg, v0, v1, margin):
-    """At each touchdown: +1 when the approaching toe is `margin` lower than the heel, -1 for a heel strike."""
+def cruise_braking(env, command_name, sensor_cfg, asset_cfg, v0, v1, accel_scale):
+    """Backward ground force (body weights) during stance while not commanded to slow down."""
+    term = env.command_manager.get_term(command_name)
+    not_braking = 1.0 - torch.clamp(-term.accel_x / accel_scale, 0.0, 1.0)
+    stance = _in_contact(env, sensor_cfg).any(dim=1).float()
+    brake = torch.clamp(-_forward_ground_force(env, asset_cfg), min=0.0)
+    return _gate(env, command_name, v0, v1) * not_braking * stance * brake
+
+
+def midfoot_landing(env, command_name, sensor_cfg, asset_cfg, v0, v1, flat_tol, span):
+    """At each touchdown: +1 forefoot (toe lower), about +0.3 flat, -1 heel strike (heel lower by > span - tol)."""
     g = gait(env, sensor_cfg)
-    score = torch.clamp(g.landing_drop / margin, -1.0, 1.0)
+    score = torch.clamp((g.landing_drop + flat_tol) / span, -1.0, 1.0)
+    score = torch.where(
+        score > 0, score * _earned(env, command_name).unsqueeze(1), score
+    )  # heel penalty unscaled
     return _gate(env, command_name, v0, v1) * torch.sum(score * g.touchdown.float(), dim=1)
 
 
@@ -254,7 +401,7 @@ def knee_lift(env, command_name, sensor_cfg, asset_cfg, v0, v1, standing_drop, t
     drop = asset.data.root_pos_w[:, 2:3] - asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
     lift = torch.clamp((standing_drop - drop) / (standing_drop - target_drop), 0.0, 1.0)
     swing = (~_in_contact(env, sensor_cfg)).float()
-    return _gate(env, command_name, v0, v1) * torch.sum(lift * swing, dim=1)
+    return _gate(env, command_name, v0, v1) * _earned(env, command_name) * torch.sum(lift * swing, dim=1)
 
 
 def swing_dorsiflexion(env, command_name, sensor_cfg, asset_cfg, foot_cfg, v0, v1, min_foot_height, span):
@@ -265,22 +412,25 @@ def swing_dorsiflexion(env, command_name, sensor_cfg, asset_cfg, foot_cfg, v0, v
     dorsi = torch.clamp((q0 - q) / span, 0.0, 1.0)
     high = env.scene[foot_cfg.name].data.body_pos_w[:, foot_cfg.body_ids, 2] > min_foot_height
     swing = (~_in_contact(env, sensor_cfg)) & high
-    return _gate(env, command_name, v0, v1) * torch.sum(dorsi * swing.float(), dim=1)
+    return (
+        _gate(env, command_name, v0, v1)
+        * _earned(env, command_name)
+        * torch.sum(dorsi * swing.float(), dim=1)
+    )
 
 
-def arm_leg_counter_swing(env, command_name, shoulder_cfg, hip_cfg, v0, v1, scale):
-    """Arm swings opposite to the same-side thigh: rewards -dq_shoulder_pitch * dq_hip_pitch (both sides)."""
-    asset = env.scene[shoulder_cfg.name]
-    product = asset.data.joint_vel[:, shoulder_cfg.joint_ids] * asset.data.joint_vel[:, hip_cfg.joint_ids]
-    return _gate(env, command_name, v0, v1) * torch.tanh(-product.sum(dim=1) / scale)
+def low_twist(env, command_name, v0, v1, std):
+    """Bounded bonus exp(-(L_z / m / std)^2): whole-body angular momentum about the vertical stays small."""
+    lz = vertical_angular_momentum_per_mass(env)
+    return _gate(env, command_name, v0, v1) * _earned(env, command_name) * torch.exp(-torch.square(lz / std))
 
 
-def staged_lean(env, command_name, asset_cfg, v0, v1, base, per_speed, per_accel, accel_range, band):
-    """Squared torso-pitch error outside a band around base + per_speed*v + per_accel*a (rad)."""
+def acceleration_lean(env, command_name, asset_cfg, v0, v1, offset, band, accel_range):
+    """Squared torso-pitch error outside a band around atan(a_cmd / g) + offset (rad)."""
     pitch, _ = torso_pitch(env, asset_cfg)
     term = env.command_manager.get_term(command_name)
     accel = torch.clamp(term.accel_x, *accel_range)
-    target = base + per_speed * term.command[:, 0] + per_accel * accel
+    target = torch.atan(accel / 9.81) + offset
     error = torch.clamp(torch.abs(pitch - target) - band, min=0.0)
     return _gate(env, command_name, v0, v1) * torch.square(error)
 
@@ -293,12 +443,40 @@ def run_yaw_tracking(env, command_name, v0, v1, std, asset_cfg=SceneEntityCfg("r
     """
     wz = env.scene[asset_cfg.name].data.root_ang_vel_b[:, 2]
     error = wz - env.command_manager.get_command(command_name)[:, 2]
-    return _gate(env, command_name, v0, v1) * torch.exp(-torch.square(error) / std**2)
+    return (
+        _gate(env, command_name, v0, v1)
+        * _earned(env, command_name)
+        * torch.exp(-torch.square(error) / std**2)
+    )
 
 
 def torso_roll_l2(env, command_name, asset_cfg, v0, v1):
     _, g_b = torso_pitch(env, asset_cfg)
     return _gate(env, command_name, v0, v1) * torch.square(g_b[:, 1])
+
+
+def _spec_vector(env, asset, key):
+    cache = env.__dict__.setdefault("_g1lab_spec", {})
+    if key not in cache:
+        cache[key] = torch.tensor([SPEC[name][key] for name in asset.joint_names], device=env.device)
+    return cache[key]
+
+
+def joint_speed_margin(env, threshold, asset_cfg=SceneEntityCfg("robot")):
+    """Sum over joints of how far |qd| exceeds `threshold` x rated speed (actuator spec), all speeds."""
+    asset = env.scene[asset_cfg.name]
+    ratio = asset.data.joint_vel.abs() / _spec_vector(env, asset, "vel")
+    return torch.sum(torch.clamp(ratio - threshold, min=0.0), dim=1)
+
+
+def torque_clipping(env, tolerance, asset_cfg=SceneEntityCfg("robot")):
+    """Sum over joints of requested-minus-delivered torque (beyond `tolerance` N*m, absorbs motor friction),
+    relative to peak torque: time spent pushing the actuators past their envelope."""
+    asset = env.scene[asset_cfg.name]
+    excess = torch.clamp(
+        asset.data.computed_torque.abs() - asset.data.applied_torque.abs() - tolerance, min=0.0
+    )
+    return torch.sum(excess / _spec_vector(env, asset, "y1"), dim=1)
 
 
 # ------------------------------------------------------------------- walking terms faded out when running
@@ -346,20 +524,31 @@ def _sides(pattern):
 
 
 SPRINT_WEIGHTS = {
-    "flight_phase": 2.0,
+    # task
+    "track_lin_vel_xy": 1.5,
+    "run_yaw_tracking": 2.0,
+    "termination": -200.0,
+    # gait (running only)
+    "flight_phase": 0.5,
     "double_support": -1.0,
+    "cadence_tracking": 2.0,
     "stance_too_long": -10.0,
-    "swing_air_time": 2.0,
-    "push_off_force": 0.5,
-    "forefoot_touchdown": 1.0,
+    "overstride": -1.0,
+    "landing_foot_speed": -1.0,
+    "wide_step": -1.0,
+    "accel_push_off": 1.0,
+    "cruise_braking": -0.5,
+    "midfoot_landing": 0.5,
     "knee_lift": 0.5,
     "swing_dorsiflexion": 0.3,
-    "arm_leg_counter_swing": 0.3,
-    "run_yaw_tracking": 1.0,
-    "termination": -100.0,
-    "staged_lean": -20.0,
+    # posture / twist (running only)
+    "low_twist": 0.5,
+    "acceleration_lean": -20.0,
     "torso_roll": -5.0,
     "run_joint_deviation_arms": -0.1,
+    # actuator envelope (all speeds)
+    "joint_speed_margin": -2.0,
+    "torque_clipping": -1.0,
 }
 
 
@@ -436,6 +625,14 @@ class SprintEnvCfg(V0GainsEnvCfg):
         self.events.reset_base.params["pose_range"]["yaw"] = (0.0, 0.0)
 
         r = self.rewards
+        w = SPRINT_WEIGHTS
+        feet = _feet_sensor
+        # Task: speed tracking with speed-relative tolerance (keeps the vendor slot the curriculum reads).
+        r.track_lin_vel_xy = RewTerm(
+            func=track_lin_vel_scaled,
+            weight=w["track_lin_vel_xy"],
+            params={"command_name": cmd, "base_std": 0.5, "rel_std": 0.15},
+        )
         # Walking-regime terms keep their original weights but fade out as the command enters running speeds.
         r.base_linear_velocity = RewTerm(func=walk_lin_vel_z_l2, weight=-2.0, params=dict(gate))
         r.flat_orientation_l2 = RewTerm(func=walk_flat_orientation_l2, weight=-5.0, params=dict(gate))
@@ -458,44 +655,74 @@ class SprintEnvCfg(V0GainsEnvCfg):
                 "threshold": g["threshold"],
             },
         )
-
-        w = SPRINT_WEIGHTS
-        feet = _feet_sensor()
+        # Running gait.
         r.flight_phase = RewTerm(
-            func=flight_phase, weight=w["flight_phase"], params={**gate, "sensor_cfg": feet}
+            func=flight_phase, weight=w["flight_phase"], params={**gate, "sensor_cfg": feet()}
         )
         r.double_support = RewTerm(
-            func=double_support, weight=w["double_support"], params={**gate, "sensor_cfg": _feet_sensor()}
+            func=double_support, weight=w["double_support"], params={**gate, "sensor_cfg": feet()}
+        )
+        r.cadence_tracking = RewTerm(
+            func=cadence_tracking,
+            weight=w["cadence_tracking"],
+            params={
+                **gate,
+                "sensor_cfg": feet(),
+                "base": 3.0,
+                "per_speed": 0.3,
+                "low": 3.2,
+                "high": 5.0,
+                "std": 0.6,
+            },
         )
         r.stance_too_long = RewTerm(
             func=stance_too_long,
             weight=w["stance_too_long"],
-            params={**gate, "sensor_cfg": _feet_sensor(), "intercept": 0.36, "slope": 0.06, "minimum": 0.15},
+            params={**gate, "sensor_cfg": feet(), "intercept": 0.36, "slope": 0.04, "minimum": 0.12},
         )
-        r.swing_air_time = RewTerm(
-            func=swing_air_time,
-            weight=w["swing_air_time"],
-            params={**gate, "sensor_cfg": _feet_sensor(), "threshold": 0.30, "cap": 0.55},
+        r.overstride = RewTerm(
+            func=overstride,
+            weight=w["overstride"],
+            params={**gate, "sensor_cfg": feet(), "max_ahead": 0.15, "scale": 0.10},
         )
-        r.push_off_force = RewTerm(
-            func=push_off_force,
-            weight=w["push_off_force"],
-            params={**gate, "sensor_cfg": _feet_sensor(), "asset_cfg": SceneEntityCfg("robot")},
+        r.landing_foot_speed = RewTerm(
+            func=landing_foot_speed, weight=w["landing_foot_speed"], params={**gate, "sensor_cfg": feet()}
         )
-        r.forefoot_touchdown = RewTerm(
-            func=forefoot_touchdown,
-            weight=w["forefoot_touchdown"],
-            params={**gate, "sensor_cfg": _feet_sensor(), "asset_cfg": _feet_body(), "margin": 0.02},
+        r.wide_step = RewTerm(
+            func=wide_step,
+            weight=w["wide_step"],
+            params={**gate, "sensor_cfg": feet(), "max_lateral": 0.10, "scale": 0.05},
+        )
+        r.accel_push_off = RewTerm(
+            func=accel_push_off,
+            weight=w["accel_push_off"],
+            params={**gate, "sensor_cfg": feet(), "asset_cfg": SceneEntityCfg("robot"), "accel_scale": 2.0},
+        )
+        r.cruise_braking = RewTerm(
+            func=cruise_braking,
+            weight=w["cruise_braking"],
+            params={**gate, "sensor_cfg": feet(), "asset_cfg": SceneEntityCfg("robot"), "accel_scale": 2.0},
+        )
+        r.midfoot_landing = RewTerm(
+            func=midfoot_landing,
+            weight=w["midfoot_landing"],
+            params={
+                **gate,
+                "sensor_cfg": feet(),
+                "asset_cfg": _feet_body(),
+                "flat_tol": 0.005,
+                "span": 0.015,
+            },
         )
         r.knee_lift = RewTerm(
             func=knee_lift,
             weight=w["knee_lift"],
             params={
                 **gate,
-                "sensor_cfg": _feet_sensor(),
+                "sensor_cfg": feet(),
                 "asset_cfg": SceneEntityCfg("robot", body_names=KNEES, preserve_order=True),
                 "standing_drop": 0.44,  # measured in PhysX at the default pose
-                "target_drop": 0.22,  # thigh roughly 70 deg forward of vertical
+                "target_drop": 0.24,
             },
         )
         r.swing_dorsiflexion = RewTerm(
@@ -503,36 +730,20 @@ class SprintEnvCfg(V0GainsEnvCfg):
             weight=w["swing_dorsiflexion"],
             params={
                 **gate,
-                "sensor_cfg": _feet_sensor(),
+                "sensor_cfg": feet(),
                 "asset_cfg": _sides("ankle_pitch_joint"),
                 "foot_cfg": _feet_body(),
                 "min_foot_height": 0.08,
                 "span": 0.3,
             },
         )
-        r.arm_leg_counter_swing = RewTerm(
-            func=arm_leg_counter_swing,
-            weight=w["arm_leg_counter_swing"],
-            params={
-                **gate,
-                "shoulder_cfg": _sides("shoulder_pitch_joint"),
-                "hip_cfg": _sides("hip_pitch_joint"),
-                "scale": 20.0,
-            },
-        )
+        # Posture and twist.
         torso = SceneEntityCfg("robot", body_names=["torso_link"])
-        r.staged_lean = RewTerm(
-            func=staged_lean,
-            weight=w["staged_lean"],
-            params={
-                **gate,
-                "asset_cfg": torso,
-                "base": 0.05,
-                "per_speed": 0.04,
-                "per_accel": 0.06,
-                "accel_range": (-1.5, 2.0),
-                "band": 0.05,
-            },
+        r.low_twist = RewTerm(func=low_twist, weight=w["low_twist"], params={**gate, "std": LOW_TWIST_STD})
+        r.acceleration_lean = RewTerm(
+            func=acceleration_lean,
+            weight=w["acceleration_lean"],
+            params={**gate, "asset_cfg": torso, "offset": 0.07, "band": 0.05, "accel_range": (-3.0, 3.0)},
         )
         r.torso_roll = RewTerm(
             func=torso_roll_l2,
@@ -544,7 +755,7 @@ class SprintEnvCfg(V0GainsEnvCfg):
             weight=w["run_joint_deviation_arms"],
             params={
                 **gate,
-                # shoulder pitch is left free for arm swing; elbow stays near its bent default
+                # shoulder pitch free for fore-aft arm swing; lateral arm motion and elbow/wrist stay near default
                 "asset_cfg": SceneEntityCfg(
                     "robot",
                     joint_names=[
@@ -558,6 +769,13 @@ class SprintEnvCfg(V0GainsEnvCfg):
         )
         r.run_yaw_tracking = RewTerm(
             func=run_yaw_tracking, weight=w["run_yaw_tracking"], params={**gate, "std": 0.5}
+        )
+        # Actuator envelope at every speed.
+        r.joint_speed_margin = RewTerm(
+            func=joint_speed_margin, weight=w["joint_speed_margin"], params={"threshold": 0.9}
+        )
+        r.torque_clipping = RewTerm(
+            func=torque_clipping, weight=w["torque_clipping"], params={"tolerance": 3.0}
         )
         # Falling (not timing out) always costs more than any penalty saved by ending the episode early.
         r.termination = RewTerm(func=lab_mdp.is_terminated, weight=w["termination"])
@@ -670,7 +888,6 @@ def add_domain_randomization(cfg):
 DR_EVENT_NAMES = ("scale_link_mass", "torso_com", "actuator_gains", "joint_armature")
 
 
-def lean_target_deg(speed, accel):
-    """Documented staged-lean target for reports (deg)."""
-    a = min(max(accel, -1.5), 2.0)
-    return math.degrees(0.05 + 0.04 * speed + 0.06 * a)
+def lean_target_deg(accel):
+    """Documented acceleration-lean target for reports (deg): atan(a/g) + 4 deg."""
+    return math.degrees(math.atan(max(-3.0, min(3.0, accel)) / 9.81) + 0.07)

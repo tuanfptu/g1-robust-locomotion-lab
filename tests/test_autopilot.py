@@ -73,3 +73,55 @@ def test_repeated_startup_failure_halts(tmp_path):
     results = [pilot.startup_failure(i, round_dir) for i in range(3)]
     assert results == [True, True, False]
     assert json.dumps(pilot.state["events"][-1]).count("repeated_startup_failures") == 1
+
+
+def test_knobs_never_raise_heading_bonuses():
+    for knob in autopilot.KNOBS:
+        for key in knob.get("overrides", {}):
+            assert "yaw" not in key and "ang_vel" not in key and "twist" not in key, (knob["name"], key)
+
+
+def collapse_pilot(tmp_path):
+    anchor = tmp_path / "anchor.pt"
+    anchor.write_bytes(b"x")
+    pilot = fake_pilot(tmp_path, {})
+    pilot.args = SimpleNamespace(max_startup_failures=3, capability_drop=1.5, stall_rounds=3)
+    pilot.state.update(
+        {
+            "round": 20,
+            "level": 7.2,
+            "latest_ckpt": str(tmp_path / "latest.pt"),
+            "best_isaac": {"speed": 3.0, "vx": 3.0, "round": 18, "ckpt": str(tmp_path / "isaac.pt")},
+            "best_capability": {"speed": 7.0, "round": 15},
+            "best_mujoco": {"speed": 5.5, "round": 11, "validation_10seeds_60s_max_passed_mps": 5.5},
+            "rounds": [{"round": 11, "train": {"checkpoint": str(anchor)}}],
+            "consecutive_failures": 0,
+        }
+    )
+    pilot.keep_capability = lambda *a: None
+    return pilot, anchor
+
+
+def ev(strict, cap):
+    return {
+        "max_sustained_speed_mps": strict,
+        "max_speed_ignoring_yaw_mps": cap,
+        "groups": [{"speed_cmd_mps": strict, "mean_vx_mps": strict}],
+    }
+
+
+def test_capability_collapse_rolls_back_to_mujoco_anchor(tmp_path):
+    pilot, anchor = collapse_pilot(tmp_path)
+    pilot.decide(21, str(tmp_path / "r21.pt"), ev(3.0, 5.5), None)  # first low round: keep going
+    assert pilot.state["latest_ckpt"] == str(tmp_path / "r21.pt")
+    pilot.decide(22, str(tmp_path / "r22.pt"), ev(3.0, 4.0), None)  # second in a row: collapse
+    assert pilot.state["latest_ckpt"] == str(anchor)
+    assert pilot.state["level"] == 6.0  # anchor speed + 0.5
+    assert pilot.state["lr"] == 5e-4
+
+
+def test_small_capability_dip_does_not_roll_back(tmp_path):
+    pilot, _ = collapse_pilot(tmp_path)
+    for n in (21, 22, 23):
+        pilot.decide(n, str(tmp_path / f"r{n}.pt"), ev(3.0, 6.0), None)
+    assert pilot.state["latest_ckpt"] == str(tmp_path / "r23.pt")
