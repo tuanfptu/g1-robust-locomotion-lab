@@ -21,13 +21,14 @@ Mục tiêu: chạy bứt tốc có pha bay, giữ thăng bằng, giảm tốc v
 Cả hai policy được chấm bằng cùng một bài MuJoCo, cùng mô hình động cơ (đỉnh mô-men theo MuJoCo + đường cong
 mô-men–tốc độ N7520), 10 seed chưa từng dùng khi train.
 
-![Baseline (trái) ngã, policy sprint (phải) chạy có pha bay ở lệnh 5,5 m/s](media/baseline-vs-sprint-5.5.gif)
+![Đi 1 m/s rồi tăng tốc lên 5,5 m/s: baseline (trái) ngã, policy dự án (phải) tăng tốc, giữ tốc và dừng](media/demo-cruise-to-5.5mps.gif)
 
-Video đầy đủ (MuJoCo, cùng seed, trái = baseline, phải = dự án):
-[1,5 m/s](media/baseline-vs-sprint-1.5.mp4) ·
-[3,0 m/s](media/baseline-vs-sprint-3.0.mp4) ·
-[4,0 m/s](media/baseline-vs-sprint-4.0.mp4) ·
-[5,5 m/s](media/baseline-vs-sprint-5.5.mp4)
+Video demo (MuJoCo, cùng seed; đi 1 m/s trong 5 s → tăng tốc → giữ 8 s → giảm tốc → dừng):
+[1 → 3,5 m/s](media/demo-cruise-to-3.5mps.mp4) · [1 → 5,5 m/s](media/demo-cruise-to-5.5mps.mp4).
+Baseline ngã ở giây 9,4 trong cả hai video (khi lệnh tăng qua ~2,8 m/s); policy dự án giữ 3,44 và 4,94 m/s,
+pha bay 41–42 %, rồi dừng.
+
+Thang tốc độ (bắt đầu từ đứng yên):
 
 | Lệnh | Baseline | Dự án (tốc độ thật khi giữ, pha bay) |
 |---|---|---|
