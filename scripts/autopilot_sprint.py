@@ -75,6 +75,12 @@ class Autopilot:
                 "latest_ckpt": None
                 if args.init_checkpoint == "scratch"
                 else str(Path(args.init_checkpoint).resolve()),
+                # The init policy is the anchor until something validated beats it (a run that started from
+                # the 5.5 m/s policy once rolled back to its own collapsed 0 m/s round).
+                "init_ckpt": None
+                if args.init_checkpoint == "scratch"
+                else str(Path(args.init_checkpoint).resolve()),
+                "init_speed": args.init_validated_speed,
                 "level": args.start_level,
                 "lr": args.lr,
                 "knobs_applied": [],
@@ -245,7 +251,9 @@ class Autopilot:
             "level": float(levels[-1]) if levels else None,
             "last_reward": rewards[-1] if rewards else None,
             "last_episode_length": float(lengths[-1]) if lengths else None,
-            "nan": bool(re.search(r"\bnan\b", " ".join(rewards), re.IGNORECASE)),
+            # A diverged policy (NaN reward, or PPO's action std driven negative/NaN) is never resumed from.
+            "nan": bool(re.search(r"\bnan\b", " ".join(rewards), re.IGNORECASE))
+            or "normal expects all elements of std" in log_text,
             "iterations_logged": len(re.findall(r"Learning iteration", log_text)),
         }
 
@@ -547,9 +555,14 @@ class Autopilot:
             self.event("new_best_capability", round=n, speed=cap, yaw=group.get("yaw_rate_rms"))
 
     def decide(self, n, ckpt, ev, bundle):
-        prev_cap = (self.state.get("best_capability") or {}).get("speed", 0.0)
+        prev_cap = max(
+            (self.state.get("best_capability") or {}).get("speed", 0.0), self.state.get("init_speed") or 0.0
+        )
         self.keep_capability(n, ckpt, ev, bundle)
         cap = ev.get("max_speed_ignoring_yaw_mps", 0.0)
+        if prev_cap > 0 and cap <= 0.0:
+            self.rollback(f"policy no longer moves (0 m/s) while the anchor does {prev_cap} m/s")
+            return
         if prev_cap >= 3.0 and cap <= prev_cap - self.args.capability_drop:
             self.state["capability_drop_rounds"] = self.state.get("capability_drop_rounds", 0) + 1
         else:
@@ -637,17 +650,25 @@ class Autopilot:
             self.event("curriculum_push", level=self.state["level"], max_sustained=max_speed)
 
     def anchor(self):
-        """(checkpoint, speed) to roll back to: the MuJoCo-validated best if known, else the Isaac best."""
+        """(checkpoint, speed) to roll back to: the fastest MuJoCo-validated policy, counting the init policy
+        (with --init-validated-speed); else the Isaac best if it moves at all; else the init policy."""
+        candidates = []
         mj = self.state.get("best_mujoco")
         if mj and mj.get("speed", 0) > 0:
             entry = next((r for r in self.state["rounds"] if r["round"] == mj["round"]), None)
             ckpt = entry and entry["train"].get("checkpoint")
             if ckpt and Path(ckpt).exists():
-                return ckpt, mj.get("validation_10seeds_60s_max_passed_mps") or mj["speed"]
+                candidates.append((mj.get("validation_10seeds_60s_max_passed_mps") or mj["speed"], ckpt))
+        init = self.state.get("init_ckpt")
+        if init and self.state.get("init_speed"):
+            candidates.append((self.state["init_speed"], init))
+        if candidates:
+            speed, ckpt = max(candidates)
+            return ckpt, speed
         best = self.state["best_isaac"]
-        if best:
+        if best and best["speed"] > 0:
             return best["ckpt"], best["speed"]
-        return self.state["latest_ckpt"], None  # never roll back to a random policy
+        return init or self.state["latest_ckpt"], None  # never roll back to a random policy
 
     def rollback(self, reason):
         target, speed = self.anchor()
@@ -846,6 +867,12 @@ def main():
     parser.add_argument("--min-free-gb", type=float, default=50.0)
     parser.add_argument("--max-startup-failures", type=int, default=5)
     parser.add_argument("--capability-drop", type=float, default=1.5)
+    parser.add_argument(
+        "--init-validated-speed",
+        type=float,
+        default=None,
+        help="MuJoCo-validated speed of --init-checkpoint; makes it the rollback anchor until beaten",
+    )
     parser.add_argument(
         "--override",
         action="append",

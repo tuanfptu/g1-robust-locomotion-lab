@@ -1,102 +1,82 @@
-# Autopilot sprint (chạy qua đêm, không cần mạng)
+# Autopilot sprint (train qua đêm, không cần mạng)
 
-## Lượt `autopilot-v2-scratch-20261116` (train từ đầu, reward v2 → v3 từ 17/11)
+[scripts/autopilot_sprint.py](../scripts/autopilot_sprint.py) — chỉ dùng thư viện chuẩn Python, chạy bằng
+`.venv-eval`, gọi Isaac (train, thang tốc độ) và MuJoCo (chấm) làm tiến trình con. Lịch sử các lượt, sự cố và
+bài học: [G1_SPRINT_REPORT.md](G1_SPRINT_REPORT.md) mục 7.
 
-- **Tốt nhất (vòng 11), MuJoCo 10 seed × 60 s:** lệnh 5,5 m/s → thực 4,94 m/s, 10/10, pha bay 46 %, chạm đất
-  0,13 s, khớp ≤ 72 % tốc độ định mức, dừng hẳn sau giảm tốc. Còn tiếp đất gót 100 %.
-- **Sự cố 1 — sụp tốc độ (vòng 18–30):** nút chỉnh `yaw_tracking_1.0` nhân đôi thưởng giữ hướng; các thưởng dáng
-  chạy chỉ xét *tốc độ lệnh* nên vẫn trả đủ khi robot chạy chậm hơn lệnh. Policy bỏ lệnh nhanh, chạy thẳng ~2 m/s
-  (thưởng bám tốc độ 1,12 → 0,41, thưởng giữ hướng 0,79 → 1,56). Tiêu chí Isaac có xét quay nên không phát hiện.
-- **Sự cố 2 — lặp lỗi khởi động (04:19–08:12 ngày 17/11):** nút `flight_weights_up` dùng khóa reward v1
-  `swing_air_time` không còn tồn tại → Isaac thoát sau 6 s, autopilot thử lại 2314 lần.
-- **Sửa (reward v3 + autopilot):** thưởng dáng chạy dương nhân với chất lượng bám tốc độ (`_earned` trong
-  [isaac_sprint.py](../src/g1lab/isaac_sprint.py); phạt không bị giảm); bỏ nút tăng thưởng quay; rollback về bản có
-  kiểm chứng MuJoCo khi tốc độ (chỉ xét tốc độ) tụt ≥ 1,5 m/s hai vòng liền; lỗi khởi động → gỡ nút chỉnh hỏng,
-  chờ tăng dần, dừng sau 5 lần. Khởi động lại từ vòng 11, lr 5e-4, critic warm-up. Bản lưu trạng thái cũ:
-  `state.before-*.json`.
-
-## Lượt cũ
-
-Lượt hiện tại khi đó: `artifacts/autopilot-spec2-20261116/` (bắt đầu 16/11/2026 10:07, **không hạn chót**), xuất phát từ
-bản tốt nhất của lượt trước (`checkpoints/round7-best/model.pt`), dải tốc độ khởi đầu 3,0 m/s, entropy 0,001.
-
-`autopilot-spec-20261116/` (09:34–09:53) bị dừng: phạt bình phương sai lệch quay khiến policy học cách ngã sớm
-(độ dài tập 618 → 58 bước). Đã thay bằng thưởng có chặn exp(−sai lệch²/0,25) và thêm phạt ngã −100; entropy 0,01
-làm nhiễu action tăng và ngã nhiều với động cơ đúng thông số nên giảm còn 0,001. Kiểm tra 200 iteration trước khi
-chạy lại: độ dài tập ~920–950, ngã 8–15%, reward tăng đều, curriculum bắt đầu tăng. Mã: [scripts/autopilot_sprint.py](../scripts/autopilot_sprint.py).
-
-### Lượt trước `autopilot-continuous-20261113` (13–16/11, 170 vòng) — đã dừng
-
-- 3,5 h đầu: Isaac từ 1,5 → 5,5 m/s, chạy có pha bay (~59–68% thời gian), chạm đất ~0,09 s, tiếp đất mũi ở
-  3–4,5 m/s; MuJoCo giữ được tới 5,5 m/s (thực 5,14 m/s) nhưng **trượt mọi seed vì thân xoay** (RMS quay 0,6–0,9 rad/s).
-- Sau đó ~2 ngày kẹt vòng lặp quay về bản tốt nhất; một tiến trình train treo 15 h vì Isaac bỏ qua SIGTERM.
-- Động cơ train khi đó **mạnh hơn thông số** (88/139 Nm phẳng, không đường cong mô-men–tốc độ).
-  Chấm lại theo thông số: MuJoCo sống tới 5,0 m/s nhưng khớp vượt tốc độ định mức 10%; Isaac chỉ còn
-  4,5 m/s (xét tốc độ) và 1,0 m/s (đủ tiêu chí).
-
-### Thay đổi cho lượt hiện tại
-
-- **Thông số động cơ chung** ([actuator_spec.py](../src/g1lab/actuator_spec.py)) cho cả Isaac và MuJoCo: đường cong
-  mô-men–tốc độ N7520 của Unitree + ma sát động cơ, giới hạn chặt nhất giữa các nguồn; MuJoCo trượt nếu khớp vượt
-  tốc độ định mức.
-- **Domain randomization:** ma sát 0,3–1,0; khối lượng khâu ±10%; torso +[−1, 3] kg; trọng tâm torso ±2–3 cm;
-  gain PD (kp ±10%, kd ±20%); quán tính khớp ±20%; độ trễ lệnh 0–20 ms (động cơ chân); đẩy ngẫu nhiên 3–7 s;
-  nhiễu quan sát.
-- **Sửa lỗi quay:** train với lệnh giữ hướng; phạt sai lệch vận tốc quay khi chạy; tiêu chí Isaac thêm RMS quay
-  < 0,25 rad/s và lệch hướng < 30°.
-- **Autopilot:** đánh giá 2 seed × 32 robot, lấy kết quả kém hơn; ngừng quay về sau 2 lần liên tiếp (chờ 4 vòng);
-  SIGKILL cả nhóm tiến trình nếu SIGTERM không có tác dụng; lưu thêm `best_capability/` (nhanh nhất chỉ xét tốc độ)
-  và `best_mujoco/` (có kiểm chứng 10 seed, 60 s).
-
-## Sáng mai xem gì
+## Khởi động
 
 ```bash
-cd ~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab
-cat artifacts/autopilot-spec2-20261116/REPORT.md        # bảng từng vòng + tốt nhất + kiểm chứng cuối
-tail -30 artifacts/autopilot-spec2-20261116/autopilot.log
-ps -eo pid,etime,args | grep "[a]utopilot_sprint"       # còn chạy không
+USD=.../G1/29dof/usd/g1_29dof_rev_1_0/g1_29dof_rev_1_0.usd
+
+# Từ đầu
+setsid nohup .venv-eval/bin/python scripts/autopilot_sprint.py --output artifacts/autopilot-<tên> \
+  --init-checkpoint scratch --usd "$USD" --hours 0 --envs 4096 --round-iterations 600 \
+  --lr 1e-3 --start-level 1.0 --speed-limit 11.0 > artifacts/autopilot-<tên>.out 2>&1 &
+
+# Train tiếp từ policy đã kiểm chứng (policy này là mốc rollback cho tới khi bị vượt)
+… --init-checkpoint models/g1-sprint-v2-r11/model.pt --init-validated-speed 5.5 --start-level 5.5
 ```
 
-- `best_isaac/model.pt`, `best_isaac/policy/` (ONNX + deploy.yaml), `best_isaac/isaac_eval.json`: checkpoint có
-  tốc độ giữ được cao nhất trong Isaac.
-- `round_NNN/`: log train, đánh giá Isaac (`isaac_eval.json`), bundle ONNX, đánh giá MuJoCo (`mujoco_eval.json`).
-- `final/`: thang 1–11 m/s trong Isaac và **kiểm chứng MuJoCo 10 seed mới, giữ 60 s** cho checkpoint tốt nhất.
-- `state.json`: toàn bộ trạng thái, có thể chạy tiếp bằng đúng lệnh khởi động với cùng `--output`.
+`--hours 0` = chạy tới khi có lệnh dừng. Chạy lại đúng lệnh với cùng `--output` sẽ tiếp tục từ `state.json`.
+`--override KEY=VALUE` (lặp được) thêm Hydra override cho mọi vòng.
+
+## Theo dõi (offline)
+
+```bash
+python3 scripts/autopilot_dashboard.py --run artifacts/autopilot-<tên> --watch 60 &   # ghi dashboard.html mỗi phút
+python3 scripts/autopilot_dashboard.py --run artifacts/autopilot-<tên> --terminal --watch 60
+cat artifacts/autopilot-<tên>/REPORT.md
+```
+
+Trong thư mục lượt chạy: `round_NNN/` (log train, đánh giá Isaac, bundle ONNX, đánh giá MuJoCo),
+`best_isaac/`, `best_capability/` (nhanh nhất chỉ xét tốc độ), `best_mujoco/` (kiểm chứng 10 seed × 60 s),
+`final/`, `state.json`, `autopilot.log`.
 
 ## Dừng
 
-Dừng êm sau vòng đang chạy (rồi tự đánh giá cuối: thang Isaac 1–11 m/s + MuJoCo 10 seed, giữ 60 s):
-
 ```bash
-echo '{"stop": true}' > artifacts/autopilot-spec2-20261116/control.json
+echo '{"stop": true}' > artifacts/autopilot-<tên>/control.json       # dừng êm sau vòng hiện tại
+echo '{"hours_from_now": 2}' > artifacts/autopilot-<tên>/control.json  # đặt hạn chót
 ```
 
-Đặt hạn chót tính từ bây giờ: `echo '{"hours_from_now": 2}' > .../control.json`.
-Dừng ngay (bỏ dở vòng hiện tại): `kill -TERM $(pgrep -f "scripts/autopilot_sprint.py --output")`.
-Tự dừng khi ổ đĩa còn < 50 GB. Mỗi bản tốt nhất mới tự được kiểm chứng MuJoCo 10 seed mới / 60 s.
+Tự dừng khi ổ đĩa còn < 50 GB, hoặc sau 5 lần train chết ngay khi khởi động.
 
-## Vòng lặp làm gì
+## Mỗi vòng
 
-1. Train PPO 600 iteration, 4096 env, task `Unitree-G1-29dof-Sprint-G1Lab`, tiếp từ checkpoint hiện tại
-   (vòng 1: actor ONNX ghép + warm-up critic 20 iteration). Mức curriculum được mang sang vòng sau.
-2. Đánh giá Isaac theo thang 1 → (mức + 1) m/s, bước 0,5, 16 robot/tốc độ, xuất phát từ đứng yên, giữ 10 s.
-   Đạt = sống ≥ 90% và vx ≥ 85% lệnh.
-3. Export ONNX; đánh giá MuJoCo (2 seed, giữ 20 s) chạy nền trên CPU.
-4. Quyết định: tốt hơn → lưu `best_isaac`; tụt > 1 m/s, NaN hoặc lỗi 2 lần → quay về best, giảm LR một nửa;
-   3 vòng không tiến → bật nút chỉnh kế tiếp (trọng số bám tốc độ 1,5; độ rộng 0,75; gia tốc lệnh 3 m/s²;
-   tăng thưởng pha bay; LR 3e-4); curriculum Unitree không tăng mà policy đã giữ gần đỉnh dải → tự nâng 0,5 m/s.
+1. Train PPO `--round-iterations` iteration trên `Unitree-G1-29dof-Sprint-G1Lab`, tiếp từ checkpoint hiện tại,
+   mang theo mức curriculum (vòng đầu từ checkpoint: warm-up critic 20 iteration).
+2. Thang tốc độ Isaac 1 → (mức + 1) m/s, 2 seed × 32 robot, lấy kết quả kém hơn; xuất phát từ đứng yên, giữ
+   10 s. "Đủ tiêu chí": sống ≥ 90 %, vx ≥ 85 % lệnh, quay < 0,25 rad/s, lệch hướng < 30°. "Chỉ xét tốc độ": bỏ
+   hai điều kiện quay.
+3. Export ONNX; MuJoCo nhanh chạy nền (CPU). Bản tốt nhất mới → MuJoCo 10 seed mới × 60 s.
+
+## Quy tắc tự xử lý
+
+| Tình huống | Xử lý |
+|---|---|
+| NaN, hoặc std hành động PPO âm/NaN | rollback về mốc, LR × 0,5; không train tiếp từ checkpoint đó |
+| Train lỗi 2 lần liên tiếp | rollback về mốc, LR × 0,5 |
+| "Chỉ xét tốc độ" về 0 m/s trong khi mốc chạy được | rollback ngay |
+| "Chỉ xét tốc độ" thấp hơn kỷ lục ≥ 1,5 m/s hai vòng liền | rollback; lần thứ hai cùng kiểu → thêm nút chỉnh |
+| "Đủ tiêu chí" tụt > 1 m/s so với bản tốt nhất | rollback (tối đa 2 lần liên tiếp, sau đó chờ 4 vòng) |
+| Chững 3 vòng | nút chỉnh kế tiếp: bám tốc độ 2,5 → gia tốc lệnh 3 m/s² → tăng thưởng pha bay/đẩy → LR 3e-4 |
+| Train chết trước iteration đầu, Hydra từ chối khoá | gỡ nút chỉnh gây lỗi, train tiếp |
+| Train chết trước iteration đầu, lý do khác | chờ 1, 2, 4 … phút; dừng sau 5 lần |
+| Curriculum không tự tăng nhưng policy giữ được gần đỉnh dải | tự nâng 0,5 m/s |
+
+**Mốc rollback** = policy nhanh nhất đã kiểm chứng MuJoCo (kể cả policy khởi tạo nếu có
+`--init-validated-speed`); nếu chưa có thì bản tốt nhất Isaac còn chạy được; không bao giờ là policy ngẫu nhiên.
+Không nút chỉnh nào được tăng thưởng giữ hướng/xoắn thân (nguyên nhân đợt sụp vòng 18–30 của lượt v2).
 
 ## An toàn
 
-- Chỉ GPU1: CUDA ghim theo UUID; một luồng canh GPU0 mỗi 2 s, thấy tiến trình của dự án là dừng toàn bộ.
-- Mọi tiến trình Isaac/MuJoCo chạy trong `unshare -rn` (không mạng); mặt đất sinh tại chỗ, không tải asset.
-  Đã kiểm thử train + đánh giá khi không có mạng.
-- Không đổi giới hạn mô-men, giới hạn vận tốc khớp, gain PD hay mô hình robot.
-- **Không tắt máy RTX 5090**: tắt máy là dừng training.
+- Chỉ GPU dự án: CUDA ghim theo UUID; luồng canh GPU0 mỗi 2 s, thấy tiến trình của dự án là dừng toàn bộ.
+- Mọi tiến trình con chạy trong `unshare -rn` (không mạng); mặt đất sinh tại chỗ.
+- Dừng tiến trình con: SIGTERM, sau đó SIGKILL cả nhóm (Isaac có thể bỏ qua SIGTERM).
+- Không đổi giới hạn mô-men, tốc độ khớp, gain PD hay mô hình robot.
+- Tắt máy hoặc cho máy ngủ là dừng training; tắt màn hình và tắt mạng thì không sao.
 
-## Kỳ vọng trung thực
+## Kỳ vọng
 
-11 m/s là trần curriculum, không phải dự báo. SPRINT công bố ~6 m/s trên G1 với prior chuyển động và
-6,5 h trên RTX 4090. Mô hình actuator ở đây chỉ có giới hạn mô-men/vận tốc phẳng, không có đường cong mô-men
-theo tốc độ, nên tốc độ đạt được trong sim có thể lạc quan so với robot thật. Kết quả sáng mai cần đọc theo
-cả Isaac lẫn MuJoCo, kèm tỷ lệ pha bay.
+11 m/s là trần curriculum, không phải dự báo. SPRINT (arXiv 2605.28549) công bố ~6 m/s trên G1.

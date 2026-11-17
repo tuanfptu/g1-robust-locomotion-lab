@@ -14,7 +14,7 @@ def _runs(flags):
         return []
     padded = np.concatenate([[False], flags, [False]])
     edges = np.flatnonzero(np.diff(padded.astype(np.int8)))
-    return list(zip(edges[::2], edges[1::2]))
+    return list(zip(edges[::2], edges[1::2], strict=True))
 
 
 def debounce(contact, release_samples):

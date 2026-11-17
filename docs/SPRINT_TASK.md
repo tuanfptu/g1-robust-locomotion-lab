@@ -1,5 +1,8 @@
 # Task Sprint G1 (chạy bứt tốc có pha bay) — thiết kế và kiểm chứng ban đầu
 
+> **Lưu trữ (13/11/2026, reward v1).** Thiết kế hiện tại (reward v2/v3, động cơ theo thông số, DR) và kết quả:
+> [G1_SPRINT_REPORT.md](G1_SPRINT_REPORT.md). Trọng số và một số term dưới đây đã thay đổi.
+
 Task Isaac: `Unitree-G1-29dof-Sprint-G1Lab` ([isaac_sprint.py](../src/g1lab/isaac_sprint.py)), kế thừa task gain v0.
 Quan sát/action không đổi (480 → 29) để vẫn ghép được actor ONNX. **Chưa train dài; mọi trọng số là giả thuyết.**
 

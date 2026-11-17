@@ -12,3 +12,5 @@ dist/
 .env
 artifacts/
 *.mp4
+!docs/media/*.mp4
+checkpoints/

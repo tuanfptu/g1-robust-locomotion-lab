@@ -125,3 +125,29 @@ def test_small_capability_dip_does_not_roll_back(tmp_path):
     for n in (21, 22, 23):
         pilot.decide(n, str(tmp_path / f"r{n}.pt"), ev(3.0, 6.0), None)
     assert pilot.state["latest_ckpt"] == str(tmp_path / "r23.pt")
+
+
+def test_zero_speed_round_rolls_back_to_validated_init(tmp_path):
+    """Run v3-20261117: round 1 collapsed to 0 m/s and became 'best'; the anchor must stay the init policy."""
+    init = tmp_path / "init.pt"
+    init.write_bytes(b"x")
+    pilot = fake_pilot(tmp_path, {})
+    pilot.args = SimpleNamespace(max_startup_failures=3, capability_drop=1.5, stall_rounds=3)
+    pilot.state.update(
+        {
+            "round": 1,
+            "level": 5.5,
+            "latest_ckpt": str(init),
+            "init_ckpt": str(init),
+            "init_speed": 5.5,
+            "best_isaac": {"speed": 0.0, "vx": 0.0, "round": 1, "ckpt": str(tmp_path / "r1.pt")},
+            "best_capability": {"speed": 0.0, "round": 1},
+            "best_mujoco": {"speed": 0.0, "round": 1},
+            "rounds": [{"round": 1, "train": {"checkpoint": str(tmp_path / "r1.pt")}}],
+            "consecutive_failures": 0,
+        }
+    )
+    pilot.keep_capability = lambda *a: None
+    pilot.decide(2, str(tmp_path / "r2.pt"), ev(0.0, 0.0), None)
+    assert pilot.state["latest_ckpt"] == str(init)
+    assert pilot.state["level"] == 5.5  # min(level, 5.5 + 0.5)

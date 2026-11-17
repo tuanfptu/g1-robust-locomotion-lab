@@ -1,0 +1,339 @@
+[
+ {
+  "time": "2026-11-16T11:41:39",
+  "kind": "new_best_capability",
+  "round": 1,
+  "speed": 0.0,
+  "yaw": null
+ },
+ {
+  "time": "2026-11-16T11:41:39",
+  "kind": "new_best_isaac",
+  "round": 1,
+  "speed": 0.0,
+  "vx": 0.0,
+  "flight": null
+ },
+ {
+  "time": "2026-11-16T12:07:50",
+  "kind": "new_best_mujoco",
+  "speed": 0.0,
+  "round": 1
+ },
+ {
+  "time": "2026-11-16T12:07:50",
+  "kind": "mujoco_validation_done",
+  "round": 1,
+  "max_passed": 0.0
+ },
+ {
+  "time": "2026-11-16T12:08:44",
+  "kind": "new_best_capability",
+  "round": 2,
+  "speed": 2.0,
+  "yaw": 0.556904994358047
+ },
+ {
+  "time": "2026-11-16T12:35:26",
+  "kind": "new_best_capability",
+  "round": 3,
+  "speed": 2.5,
+  "yaw": 0.4641172678575891
+ },
+ {
+  "time": "2026-11-16T13:02:27",
+  "kind": "new_best_capability",
+  "round": 4,
+  "speed": 4.0,
+  "yaw": 0.7500919444628174
+ },
+ {
+  "time": "2026-11-16T13:02:27",
+  "kind": "new_best_isaac",
+  "round": 4,
+  "speed": 2.0,
+  "vx": 2.0134196281433105,
+  "flight": 0.011187500320374966
+ },
+ {
+  "time": "2026-11-16T13:28:05",
+  "kind": "new_best_mujoco",
+  "speed": 2.0,
+  "round": 4
+ },
+ {
+  "time": "2026-11-16T13:28:05",
+  "kind": "mujoco_validation_done",
+  "round": 4,
+  "max_passed": 2.0
+ },
+ {
+  "time": "2026-11-16T13:29:05",
+  "kind": "new_best_capability",
+  "round": 5,
+  "speed": 4.5,
+  "yaw": 0.7552797919480311
+ },
+ {
+  "time": "2026-11-16T13:56:05",
+  "kind": "mujoco_best_validation_done",
+  "round": 4,
+  "max_passed": 2.0
+ },
+ {
+  "time": "2026-11-16T13:56:05",
+  "kind": "new_best_mujoco",
+  "speed": 3.0,
+  "round": 5
+ },
+ {
+  "time": "2026-11-16T13:57:55",
+  "kind": "new_best_isaac",
+  "round": 6,
+  "speed": 2.0,
+  "vx": 2.0491247177124023,
+  "flight": 0.11081250011920929
+ },
+ {
+  "time": "2026-11-16T14:24:40",
+  "kind": "mujoco_best_validation_done",
+  "round": 5,
+  "max_passed": 3.0
+ },
+ {
+  "time": "2026-11-16T14:24:40",
+  "kind": "mujoco_validation_done",
+  "round": 6,
+  "max_passed": 2.0
+ },
+ {
+  "time": "2026-11-16T14:25:44",
+  "kind": "new_best_capability",
+  "round": 7,
+  "speed": 5.0,
+  "yaw": 0.7021847265890753
+ },
+ {
+  "time": "2026-11-16T14:25:44",
+  "kind": "new_best_isaac",
+  "round": 7,
+  "speed": 2.5,
+  "vx": 2.4254870414733887,
+  "flight": 0.20250000059604645
+ },
+ {
+  "time": "2026-11-16T14:55:18",
+  "kind": "new_best_mujoco",
+  "speed": 3.5,
+  "round": 7
+ },
+ {
+  "time": "2026-11-16T14:55:18",
+  "kind": "mujoco_validation_done",
+  "round": 7,
+  "max_passed": 2.5
+ },
+ {
+  "time": "2026-11-16T14:57:58",
+  "kind": "new_best_capability",
+  "round": 8,
+  "speed": 5.5,
+  "yaw": 0.6265665686801076
+ },
+ {
+  "time": "2026-11-16T15:45:44",
+  "kind": "mujoco_best_validation_done",
+  "round": 7,
+  "max_passed": 3.5
+ },
+ {
+  "time": "2026-11-16T15:45:44",
+  "kind": "new_best_mujoco",
+  "speed": 4.0,
+  "round": 8
+ },
+ {
+  "time": "2026-11-16T16:24:21",
+  "kind": "mujoco_best_validation_done",
+  "round": 8,
+  "max_passed": 4.0
+ },
+ {
+  "time": "2026-11-16T16:25:39",
+  "kind": "new_best_capability",
+  "round": 10,
+  "speed": 6.0,
+  "yaw": 0.5570325575889445
+ },
+ {
+  "time": "2026-11-16T16:25:39",
+  "kind": "new_best_isaac",
+  "round": 10,
+  "speed": 2.5,
+  "vx": 2.4715256690979004,
+  "flight": 0.2500625252723694
+ },
+ {
+  "time": "2026-11-16T17:09:55",
+  "kind": "new_best_mujoco",
+  "speed": 5.0,
+  "round": 10
+ },
+ {
+  "time": "2026-11-16T17:09:55",
+  "kind": "mujoco_validation_done",
+  "round": 10,
+  "max_passed": 2.5
+ },
+ {
+  "time": "2026-11-16T17:12:34",
+  "kind": "new_best_isaac",
+  "round": 11,
+  "speed": 3.0,
+  "vx": 2.924790143966675,
+  "flight": 0.28306251764297485
+ },
+ {
+  "time": "2026-11-16T17:12:34",
+  "kind": "curriculum_push",
+  "level": 5.3,
+  "max_sustained": 6.0
+ },
+ {
+  "time": "2026-11-16T17:59:42",
+  "kind": "mujoco_best_validation_done",
+  "round": 10,
+  "max_passed": 5.0
+ },
+ {
+  "time": "2026-11-16T17:59:42",
+  "kind": "new_best_mujoco",
+  "speed": 5.5,
+  "round": 11
+ },
+ {
+  "time": "2026-11-16T17:59:42",
+  "kind": "mujoco_validation_done",
+  "round": 11,
+  "max_passed": 3.0
+ },
+ {
+  "time": "2026-11-16T18:49:05",
+  "kind": "mujoco_best_validation_done",
+  "round": 11,
+  "max_passed": 5.5
+ },
+ {
+  "time": "2026-11-16T18:51:34",
+  "kind": "new_best_capability",
+  "round": 13,
+  "speed": 6.5,
+  "yaw": 0.5395601711923307
+ },
+ {
+  "time": "2026-11-16T19:40:08",
+  "kind": "knob_applied",
+  "knob": "yaw_tracking_run_2.0"
+ },
+ {
+  "time": "2026-11-16T19:40:08",
+  "kind": "curriculum_push",
+  "level": 6.3,
+  "max_sustained": 6.5
+ },
+ {
+  "time": "2026-11-16T20:28:39",
+  "kind": "new_best_capability",
+  "round": 15,
+  "speed": 7.0,
+  "yaw": 0.5133374071682045
+ },
+ {
+  "time": "2026-11-16T22:05:53",
+  "kind": "knob_applied",
+  "knob": "yaw_tracking_1.0"
+ },
+ {
+  "time": "2026-11-16T22:54:50",
+  "kind": "new_best_isaac",
+  "round": 18,
+  "speed": 3.0,
+  "vx": 2.9834063053131104,
+  "flight": 0.3022499978542328
+ },
+ {
+  "time": "2026-11-16T23:23:12",
+  "kind": "mujoco_validation_done",
+  "round": 18,
+  "max_passed": 3.0
+ },
+ {
+  "time": "2026-11-17T00:17:51",
+  "kind": "new_best_isaac",
+  "round": 21,
+  "speed": 3.0,
+  "vx": 3.0430328845977783,
+  "flight": 0.304437518119812
+ },
+ {
+  "time": "2026-11-17T00:43:35",
+  "kind": "mujoco_validation_done",
+  "round": 21,
+  "max_passed": 3.0
+ },
+ {
+  "time": "2026-11-17T01:38:28",
+  "kind": "knob_applied",
+  "knob": "track_weight_1.5"
+ },
+ {
+  "time": "2026-11-17T02:58:47",
+  "kind": "knob_applied",
+  "knob": "accel_3.0"
+ },
+ {
+  "time": "2026-11-17T04:18:59",
+  "kind": "knob_applied",
+  "knob": "flight_weights_up"
+ },
+ {
+  "time": "2026-11-17T04:19:11",
+  "kind": "rollback",
+  "reason": "repeated_failure_or_nan",
+  "to": "~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/artifacts/autopilot-v2-scratch-20261116/best_isaac/model.pt",
+  "lr": 0.0005,
+  "level": 3.5
+ },
+ {
+  "time": "2026-11-17T04:19:23",
+  "kind": "rollback",
+  "reason": "repeated_failure_or_nan",
+  "to": "~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/artifacts/autopilot-v2-scratch-20261116/best_isaac/model.pt",
+  "lr": 0.00025,
+  "level": 3.5
+ },
+ {
+  "time": "2026-11-17T04:19:35",
+  "kind": "rollback",
+  "reason": "repeated_failure_or_nan",
+  "to": "~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/artifacts/autopilot-v2-scratch-20261116/best_isaac/model.pt",
+  "lr": 0.000125,
+  "level": 3.5
+ },
+ {
+  "time": "2026-11-17T04:19:47",
+  "kind": "rollback",
+  "reason": "repeated_failure_or_nan",
+  "to": "~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/artifacts/autopilot-v2-scratch-20261116/best_isaac/model.pt",
+  "lr": 6.25e-05,
+  "level": 3.5
+ },
+ {
+  "time": "2026-11-17T04:19:59",
+  "kind": "rollback",
+  "reason": "repeated_failure_or_nan",
+  "to": "~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/artifacts/autopilot-v2-scratch-20261116/best_isaac/model.pt",
+  "lr": 3.125e-05,
+  "level": 3.5
+ }
+]

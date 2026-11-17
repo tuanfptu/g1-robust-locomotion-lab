@@ -1,0 +1,21 @@
+{
+  "output": "~/TUAN__HUMAN_NOID_G1_RUNNER/g1-5090-handoff/g1-robust-locomotion-lab/artifacts/videos/final/compare-1.5.mp4",
+  "speed_cmd_mps": 1.5,
+  "seed": 99100,
+  "panels": [
+    {
+      "label": "Baseline: ONNX goc Unitree",
+      "policy": "vendor ONNX v0",
+      "mean_vx_hold_mps": 1.4929221142530815,
+      "flight_fraction_hold": 0.0,
+      "fell_at_s": null
+    },
+    {
+      "label": "Sprint (du an): best vong 11",
+      "policy": "checkpoints/v2-round11-best/policy",
+      "mean_vx_hold_mps": 1.5546470185419536,
+      "flight_fraction_hold": 0.015590200445434299,
+      "fell_at_s": null
+    }
+  ]
+}

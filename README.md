@@ -5,22 +5,29 @@ Hướng hiện tại: dạy G1 **chạy bứt tốc có pha bay**, giữ thăng
 
 Isaac Sim 5.1 / Isaac Lab 2.3.2 (PhysX, train) • RSL-RL PPO • MuJoCo (đánh giá độc lập) • RTX 5090
 
-## Trạng thái hiện tại (13/11/2026)
+## Kết quả (17/11/2026)
 
-| Hạng mục | Trạng thái |
-|---|---|
-| Baseline tốt nhất đã kiểm chứng | Policy ONNX công khai của Unitree + vòng giữ hướng: **1,39 m/s**, 10/10 seed giữ 60 s rồi dừng (MuJoCo). Dáng **đi bộ**: 0% pha bay, tiếp đất bằng gót. Từ 2 m/s ngã. |
-| Tái hiện trên RTX 5090 | Khớp kết quả máy cũ tới 1e-15 (46/46 lượt), `episodes.csv` giống từng byte |
-| Pipeline train Isaac | Chạy được: smoke, resume, 512–16384 env, export ONNX → chấm MuJoCo |
-| Khởi tạo PPO | Ghép **chính xác** actor ONNX vào checkpoint RSL-RL + warm-up critic (ONNX chính là actor RSL-RL) |
-| Task Sprint | Đã dựng và kiểm chứng ở mức smoke: 12 term reward kỹ thuật chạy hoạt động, đúng dấu |
-| Autopilot | Vòng lặp train → đánh giá → giữ bản tốt nhất → tự xử lý → báo cáo, chạy không cần mạng; một lượt chạy không giới hạn đã khởi động 13/11/2026 |
-| **Chưa có** | Policy chạy nhanh hơn baseline đã kiểm chứng. Kết quả autopilot (checkpoint, báo cáo) nằm trong `artifacts/` trên máy train, không có trong Git |
+![Lệnh 5,5 m/s trong MuJoCo: baseline Unitree (trái) ngã, policy sprint (phải) chạy có pha bay](docs/media/baseline-vs-sprint-5.5.gif)
 
-Mục tiêu gần: 2–3 m/s thực tế, giữ 60 s, có pha bay, giảm tốc và dừng, kiểm chứng trên 10 seed mới.
-11 m/s chỉ là trần của curriculum để nghiên cứu, **không phải cam kết**: bài báo SPRINT công bố khoảng
-6 m/s trên G1. Giới hạn mô-men, giới hạn vận tốc khớp, gain PD và mô hình robot không bị nới để làm đẹp
-kết quả.
+| Chấm MuJoCo, 10 seed mới × giữ 60 s, cùng mô hình động cơ | Baseline (ONNX công khai Unitree) | **Policy sprint** |
+|---|---|---|
+| Tốc độ cao nhất đạt 10/10 | 1,0 m/s | **lệnh 5,5 → thực 4,94 m/s** |
+| Lệnh 2,0 m/s | ngã 10/10 sau ~6 s | 2,08 m/s, 10/10 |
+| Dáng | đi bộ, 0 % pha bay | chạy, **pha bay 46 %**, chạm đất 0,13 s |
+| Giảm tốc và dừng | có | có, mọi mức tới 5,5 m/s |
+| Tốc độ khớp cao nhất / định mức | — | 72 % |
+
+Video cạnh nhau (trái baseline, phải dự án): [1,5](docs/media/baseline-vs-sprint-1.5.mp4) ·
+[3,0](docs/media/baseline-vs-sprint-3.0.mp4) · [4,0](docs/media/baseline-vs-sprint-4.0.mp4) ·
+[5,5 m/s](docs/media/baseline-vs-sprint-5.5.mp4). Policy: [models/g1-sprint-v2-r11/](models/g1-sprint-v2-r11/).
+
+**Báo cáo đầy đủ — kiến trúc, công cụ, thiết kế reward, động cơ, quy trình, sự cố, hạn chế:**
+[docs/G1_SPRINT_REPORT.md](docs/G1_SPRINT_REPORT.md).
+
+Chưa đạt: tiếp đất bằng gót (yêu cầu mũi chân), chưa đánh tay, dáng còn khuỵu, nhịp bước chưa tăng theo tốc độ.
+Train tiếp từ policy này đang bị sụp trong vài trăm iteration đầu; nguyên nhân đang được tách bằng thí nghiệm.
+11 m/s là trần nghiên cứu, **không phải cam kết** (bài báo SPRINT công bố ~6 m/s trên G1). Giới hạn mô-men, tốc
+độ khớp, gain PD và mô hình robot không bị nới để làm đẹp kết quả.
 
 ## Luồng làm việc
 
@@ -49,16 +56,18 @@ cho cùng kết quả, nên mọi con số đều ghi rõ đo bằng simulator n
 `Unitree-G1-29dof-Sprint-G1Lab` ([src/g1lab/isaac_sprint.py](src/g1lab/isaac_sprint.py)) giữ nguyên quan sát
 và action (480 → 29), nên vẫn ghép được actor ONNX.
 
-- **Cổng tốc độ:** dưới 1,6 m/s, reward giống task đi bộ mà ONNX được train. Từ 1,6 đến 2,2 m/s, reward
-  chuyển dần sang bộ reward chạy nước rút.
-- **Reward kỹ thuật chạy:** pha bay; phạt hai chân cùng chạm; chạm đất ngắn (trần thời gian giảm theo tốc
-  độ); thời gian bay của chân; lực đẩy ngang; tiếp đất bằng mũi chân; nâng gối; gập cổ chân khi vung; tay
-  vung ngược pha chân cùng bên; đổ người theo tốc độ **và** gia tốc.
+- **Reward:** 19 term gốc Unitree + 20 term chạy nước rút (pha bay, chạm đất ngắn, cadence theo tốc độ, lực đẩy
+  ngang Σ mᵢaᵢ, tiếp đất mũi chân, đặt chân dưới thân, nâng gối, gập cổ chân, mô-men động lượng thấp, đổ người
+  theo gia tốc, chạy thẳng, biên độ động cơ, phạt ngã −200). Bám tốc độ có dung sai σ = max(0,5; 0,15·v).
+- **Cổng tốc độ:** dưới 1,6 m/s reward giống task đi bộ gốc; từ 1,6 đến 2,2 m/s chuyển dần sang reward chạy.
+- **Chống lách reward (v3):** thưởng dáng chạy dương chỉ được trả theo tỷ lệ bám tốc độ.
+- **Động cơ theo thông số** ([actuator_spec.py](src/g1lab/actuator_spec.py)), dùng chung cho Isaac và MuJoCo:
+  đỉnh mô-men theo mô hình MuJoCo + đường cong mô-men–tốc độ N7520, trễ 0–20 ms. **Domain randomization:** ma sát,
+  khối lượng, trọng tâm, gain PD, armature, đẩy ngẫu nhiên.
 - **Pha bước không dùng đồng hồ:** cảm biến bàn chân ngưỡng 20 N, khử nhiễu 40 ms.
-- **Lệnh tốc độ có giới hạn gia tốc:** mỗi tập xuất phát từ đứng yên, có lệnh giảm tốc và dừng. Curriculum
-  mở dải tốc độ tới trần 3,5 m/s; autopilot nâng trần lên 11 m/s.
+- **Lệnh tốc độ có giới hạn gia tốc:** mỗi tập xuất phát từ đứng yên, có giảm tốc và dừng; curriculum tới 11 m/s.
 
-Chi tiết trọng số và số liệu kiểm chứng: [docs/SPRINT_TASK.md](docs/SPRINT_TASK.md).
+Bảng trọng số và lý do từng thay đổi: [báo cáo, mục 4](docs/G1_SPRINT_REPORT.md#4-thiết-kế-phần-thưởng).
 
 ## Cài đặt
 
@@ -115,6 +124,9 @@ python scripts/prepare_lab_fast.py --profile sprint --usd "$USD" --envs 4096 --i
 python scripts/isaac_sprint_eval.py --policy <run>/model_N.pt --usd "$USD" --speeds 1,2,3,4,5 --output <json>
 python scripts/export_rslrl_onnx.py --checkpoint <run>/model_N.pt --output artifacts/policies/<name>
 .venv-eval/bin/python scripts/mujoco_sprint_eval.py --policy-dir artifacts/policies/<name> --speeds 1,1.5,2 --output <json>
+
+# Video MuJoCo so sánh với baseline (EGL trên GPU dự án)
+.venv-eval/bin/python scripts/render_compare.py --right-policy models/g1-sprint-v2-r11 --speed 5.5 --output <mp4>
 ```
 
 ### Autopilot (train không người trông, không cần mạng)
@@ -128,22 +140,17 @@ cat artifacts/autopilot-<tên>/REPORT.md                                # tiến
 echo '{"stop": true}' > artifacts/autopilot-<tên>/control.json        # dừng êm sau vòng hiện tại
 ```
 
-`--hours 0` nghĩa là chạy đến khi có lệnh dừng. Mỗi vòng: train 600 iteration → đánh giá Isaac → export →
-MuJoCo chạy nền. Quy tắc tự xử lý:
-- Lưu bản tốt nhất theo tốc độ giữ được trong Isaac.
-- Tụt hơn 1 m/s so với bản tốt nhất, hoặc NaN, hoặc train lỗi → quay về bản tốt nhất và giảm LR một nửa.
-- Chững 3 vòng → bật nút chỉnh kế tiếp.
-- Nếu curriculum không tự tăng mà policy đã giữ được tốc độ gần đỉnh dải → tự nâng thêm 0,5 m/s.
-
-Mỗi bản tốt nhất mới được kiểm chứng MuJoCo 10 seed mới, giữ 60 s. Mọi tiến trình con chạy trong
-`unshare -rn` (không mạng). Một luồng canh sẽ dừng toàn bộ nếu tiến trình của dự án xuất hiện trên GPU khác.
-Tự dừng khi ổ đĩa còn dưới 50 GB. Chi tiết: [docs/AUTOPILOT.md](docs/AUTOPILOT.md).
+`--hours 0` nghĩa là chạy đến khi có lệnh dừng. Mỗi vòng: train 600 iteration → thang tốc độ Isaac → export →
+MuJoCo chạy nền; bản tốt nhất mới được kiểm chứng MuJoCo 10 seed × 60 s. Tự rollback về policy đã kiểm chứng
+khi tụt tốc độ, NaN hoặc std âm; chặn lỗi khởi động lặp; tự nâng curriculum. Mọi tiến trình con chạy không mạng
+(`unshare -rn`), có luồng canh GPU khác. Theo dõi offline: `python3 scripts/autopilot_dashboard.py --run <run>
+--watch 60` rồi mở `<run>/dashboard.html`. Quy tắc đầy đủ: [docs/AUTOPILOT.md](docs/AUTOPILOT.md).
 
 ## Tiêu chí đánh giá
 
 | Simulator | Đạt |
 |---|---|
-| Isaac (thang tốc độ) | Xuất phát từ đứng yên, tăng tốc 2 m/s², giữ 10 s: ≥ 90% robot sống và vx trung bình ≥ 85% lệnh |
+| Isaac (thang tốc độ) | Xuất phát từ đứng yên, tăng tốc 2 m/s², giữ 10 s, 2 seed × 32 robot: ≥ 90% robot sống, vx trung bình ≥ 85% lệnh, RMS quay < 0,25 rad/s, lệch hướng < 30° |
 | MuJoCo (chấm cuối) | Đứng → tăng tốc → giữ 60 s → giảm tốc → dừng: không ngã, vx ≥ 85% lệnh, RMSE phẳng ≤ max(0,15; 20% lệnh), RMS quay < 0,25 rad/s, lệch hướng < 30°, tốc độ cuối < 0,15 m/s |
 
 Số đo kỹ thuật chạy được báo cáo kèm (MuJoCo 500 Hz, ngưỡng 20 N, khử nhiễu 40 ms): tỷ lệ pha bay, hai chân
@@ -153,7 +160,8 @@ biên độ và tương quan tay–chân, góc ngả thân. Ngưỡng bắt bu�
 ## Cấu trúc
 
 ```text
-src/g1lab/isaac_sprint.py     Task Sprint: lệnh tốc độ giới hạn gia tốc, theo dõi pha bước, reward, terrain offline
+src/g1lab/isaac_sprint.py     Task Sprint: lệnh tốc độ giới hạn gia tốc, theo dõi pha bước, reward, DR, terrain offline
+src/g1lab/actuator_spec.py    Mô hình động cơ chung Isaac/MuJoCo (đỉnh mô-men, đường cong N7520)
 src/g1lab/isaac_v0_cfg.py     Task velocity với gain PD của ONNX v0
 src/g1lab/isaac_tasks.py      Đăng ký task (entry point dạng chuỗi, không cần Isaac khi import)
 src/g1lab/gpu.py              Ghim GPU (CUDA theo UUID, EGL theo PCI, tham số Kit)
@@ -162,6 +170,8 @@ src/g1lab/gait_metrics.py     Số đo kỹ thuật chạy (thuần numpy)
 src/g1lab/lab_policy.py       Chạy policy ONNX 29 khớp trong MuJoCo (+ telemetry chỉ đọc)
 src/g1lab/lab_evaluation.py   Kịch bản đứng/tăng tốc/giữ/giảm tốc/dừng và tiêu chí đạt
 scripts/autopilot_sprint.py   Vòng lặp train/đánh giá/tự xử lý không người trông
+scripts/autopilot_dashboard.py Dashboard HTML/terminal offline cho một lượt autopilot
+scripts/render_compare.py     Video MuJoCo hai policy cạnh nhau
 scripts/isaac_train.py        Wrapper train.py của vendor: đăng ký task, warm-up critic
 scripts/prepare_lab_fast.py   Launcher train Isaac + provenance
 scripts/onnx_to_rslrl.py      ONNX → checkpoint RSL-RL
@@ -170,6 +180,8 @@ scripts/isaac_sprint_eval.py  Thang tốc độ trong Isaac
 scripts/mujoco_sprint_eval.py Thang tốc độ trong MuJoCo kèm số đo pha bay
 scripts/isaac_sprint_probe.py Kiểm tra dấu/độ lớn các term reward
 vendor/                       unitree_rl_lab, unitree_mujoco (revision ghim)
+models/g1-sprint-v2-r11/      Policy sprint tốt nhất (ONNX, deploy.yaml, checkpoint RSL-RL)
+docs/media/                   Video/GIF so sánh với baseline
 docs/experiment-data/         Số liệu nhỏ đi kèm các báo cáo
 legacy/, src/g1lab/env.py ... Pipeline MuJoCo/SB3 thời 1660 (xem bên dưới)
 ```
@@ -191,7 +203,8 @@ teacher chân 12 khớp, không resume được bằng RSL-RL.
 ## Tài liệu
 
 - [Bring-up RTX 5090](docs/RTX_5090_BRINGUP.md): môi trường, số đo quy mô env, gain v0, khởi tạo
-- [Task Sprint](docs/SPRINT_TASK.md) · [Autopilot](docs/AUTOPILOT.md)
+- **[Báo cáo dự án G1 Sprint](docs/G1_SPRINT_REPORT.md)** · [Autopilot](docs/AUTOPILOT.md) ·
+  [Thiết kế task Sprint v1 (lưu trữ)](docs/SPRINT_TASK.md)
 - [Đánh giá SPRINT (arXiv 2605.28549) và kế hoạch tích hợp](docs/SPRINT_INTEGRATION.md): chưa có code/data công khai
 - [Bàn giao 5090](docs/CLAUDE_5090_START_HERE.md) · [Trạng thái kiểm chứng](docs/VALIDATION.md)
 - Provenance và giấy phép: [THIRD_PARTY.md](THIRD_PARTY.md)

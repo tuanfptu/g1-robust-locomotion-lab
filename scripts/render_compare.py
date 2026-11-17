@@ -46,7 +46,7 @@ def main(args):
     fallen = [False, False]
     stats = [{"vx": [], "flight": 0, "steps": 0, "fell_at": None} for _ in envs]
     try:
-        for step in range(int(round(duration / 0.02))):
+        for _ in range(int(round(duration / 0.02))):
             frames = []
             for i, env in enumerate(envs):
                 t = env.data.time

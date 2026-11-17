@@ -20,7 +20,6 @@ Design principles (hypotheses, to be checked by ablation and the MuJoCo benchmar
   all occur in training.
 """
 
-import math
 from collections.abc import Sequence
 from dataclasses import MISSING
 
@@ -125,7 +124,9 @@ def _earned(env, command_name):
     tracking reward 1.12 -> 0.41 while yaw bonuses 0.79 -> 1.56 and the Isaac top speed fell 5.4 -> 2.0 m/s).
     Penalties are not scaled, so slowing down never makes them cheaper.
     """
-    return track_lin_vel_scaled(env, command_name, *EARNED_STD)
+    floor = float(getattr(env.cfg, "earned_floor", 0.0))  # 1.0 = reward v2 (bonuses ignore speed tracking)
+    q = track_lin_vel_scaled(env, command_name, *EARNED_STD)
+    return floor + (1.0 - floor) * q
 
 
 class GaitTracker:
@@ -555,6 +556,8 @@ SPRINT_WEIGHTS = {
 @configclass
 class SprintEnvCfg(V0GainsEnvCfg):
     sprint_speed_limit: float = 3.5
+    # Share of the running-style bonuses paid regardless of speed tracking (0 = reward v3, 1 = reward v2).
+    earned_floor: float = 0.0
 
     def __post_init__(self):
         super().__post_init__()
@@ -886,8 +889,3 @@ def add_domain_randomization(cfg):
 
 
 DR_EVENT_NAMES = ("scale_link_mass", "torso_com", "actuator_gains", "joint_armature")
-
-
-def lean_target_deg(accel):
-    """Documented acceleration-lean target for reports (deg): atan(a/g) + 4 deg."""
-    return math.degrees(math.atan(max(-3.0, min(3.0, accel)) / 9.81) + 0.07)

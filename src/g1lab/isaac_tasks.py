@@ -6,7 +6,6 @@ the configuration module is imported lazily after the simulator app has started.
 
 import gymnasium as gym
 
-VENDOR_TASK = "Unitree-G1-29dof-Velocity"
 # Name must contain "Unitree" because the pinned train.py restricts --task choices to such ids.
 V0_GAINS_TASK = "Unitree-G1-29dof-Velocity-G1LabV0Gains"
 SPRINT_TASK = "Unitree-G1-29dof-Sprint-G1Lab"
